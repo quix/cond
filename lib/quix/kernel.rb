@@ -45,12 +45,19 @@ module Kernel
     end
   end
 
+  def system2(*args)
+    unless system(*args)
+      raise "system() failed with exit status #{$?.exitstatus}"
+    end
+  end
+
   let {
     method_name = :gensym
     mutex = Mutex.new
     count = 0
 
     define_method(method_name) { |*args|
+      # workaround for no default args
       prefix =
         case args.size
         when 0
@@ -69,4 +76,14 @@ module Kernel
     }
     private method_name
   }
+
+  def loop_with(done = gensym, restart = gensym)
+    catch(done) {
+      while true
+        catch(restart) {
+          yield(done, restart)
+        }
+      end
+    }
+  end
 end
