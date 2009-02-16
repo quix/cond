@@ -20,12 +20,14 @@ module Quix
       path.sub(%r!/+\Z!, "")
     end
     
+    # unix2dos/dos2unix also fix \r\r\n files arising from perforce bugs
+
     def unix2dos(string)
-      string.gsub(%r![^\r]\n!) { "#{$1}\r\n" }
+      string.gsub("\r", "").gsub("\n", "\r\n")
     end
     
     def dos2unix(string)
-      string.gsub("\r\n", "\n")
+      string.gsub("\r", "")
     end
 
     def dos_path(unix_path)
