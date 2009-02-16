@@ -8,7 +8,7 @@ module Quix
     module_function
 
     def eval_locals(code_with_locals, &block)
-      code_with_locals.call.split(",").map { |name|
+      code_with_locals.call.split(%r!\s+!).map { |name|
         name.strip
       }.each { |name|
         block.call(name, eval(name, code_with_locals.binding))

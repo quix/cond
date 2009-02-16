@@ -49,7 +49,7 @@ module Quix
             end
           }
   
-          acc << locals_to_hash {%{source, dest, install, uninstall}}
+          acc << locals_to_hash {%{source dest install uninstall}}
         end
       }
     end

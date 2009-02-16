@@ -11,7 +11,7 @@ class TestVars < Test::Unit::TestCase
     b = Object.new
     c = lambda { a + 11 }
 
-    hash = locals_to_hash {%{a, b, c}}
+    hash = locals_to_hash {%{a b c}}
 
     assert_equal(a.object_id, hash[:a].object_id)
     assert_equal(b.object_id, hash[:b].object_id)
@@ -78,7 +78,7 @@ class TestVars < Test::Unit::TestCase
     assert(!defined?(@b))
     assert(!defined?(@c))
     
-    locals_to_ivs {%{a, b, c}}
+    locals_to_ivs {%{a b c}}
 
     assert_equal(a.object_id, @a.object_id)
     assert_equal(b.object_id, @b.object_id)
