@@ -20,6 +20,14 @@ class Pathname
     to_s =~ regexp
   end
 
+  def restring
+    Pathname.new(yield(to_s))
+  end
+
+  def to_dos
+    restring { |t| t.gsub("/", "\\") }
+  end
+
   class << self
     def join(*paths)
       Pathname.new File.join(*paths)
