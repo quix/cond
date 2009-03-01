@@ -48,21 +48,21 @@ module Kernel
 
     define_method(method_name) { |*args|
       # workaround for no default args
-      prefix =
+      prefix = (
         case args.size
         when 0
           :G
         when 1
           args.first
         else
-          raise ArgumentError,
-            "wrong number of arguments (#{args.size} for 1)"
+          raise ArgumentError, "wrong number of arguments (#{args.size} for 1)"
         end
+      )
 
       mutex.synchronize {
         count += 1
       }
-      :"#{prefix}#{count}"
+      "#{prefix}#{count}".to_sym
     }
     private method_name
   }
