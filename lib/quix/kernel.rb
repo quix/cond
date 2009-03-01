@@ -35,9 +35,9 @@ module Kernel
     with_warnings(false, &block)
   end
 
-  def system2(*args)
+  def system_or_raise(*args)
     unless system(*args)
-      raise "system() failed with exit status #{$?.exitstatus}"
+      raise "system(*#{args.inspect}) failed with exit status #{$?.exitstatus}"
     end
   end
 
