@@ -1,8 +1,11 @@
 
 require 'rbconfig'
-require 'quix/kernel'
+require 'cond/util'
 
-module Quix
+module Cond
+end
+
+module Cond::Test
   module Ruby
     EXECUTABLE = File.join(
       Config::CONFIG["bindir"],
@@ -10,6 +13,8 @@ module Quix
     )
 
     class << self
+      include Cond::Util
+
       def run(*args)
         system(EXECUTABLE, *args)
       end

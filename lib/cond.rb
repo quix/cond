@@ -1,296 +1,241 @@
 
-require 'quix'
+require 'cond/util'
+require 'cond/invade'
+require 'cond/thread_local_stack'
 
 module Cond
-  class << self
-    ###################################################################
-    #
-    # Cond metaclass
-    #
-    ###################################################################
+  extend Util
 
-    def with_handlers(handlers, &block)
-      #
-      # We are redefining and re-redefining raise--modifying the
-      # Object singleton--so we must hold the global lock.
-      #
-      Thread.exclusive {
-        if @first_call
-          if $DEBUG
-            exception_wrap_builtins
-          end
-          @first_call = false
-        end
-        (stack = @handler_stack.value).push(stack.last.merge(handlers))
-        define_raise
-        begin
-          block.call
-        ensure
-          stack.pop
-          if stack.size == 1
-            remove_raise
-          end
-        end
-      }
-    end
+  @handlers_stack, @restarts_stack = (1..2).map {
+    ThreadLocalStack.new.tap { |t| t.push(Hash.new) }
+  }
 
-    def with_restarts(restarts, &block)
-      (stack = @restarts_stack.value).push(stack.last.merge(restarts))
-      begin
-        block.call
-      ensure
-        stack.pop
-      end
-    end
-    
-    def with_default_handler(&block)
-      with_handlers(Exception => default_handler) {
-        block.call
-      }
-    end
+  # for default handlers and default restarts
+  @stream = ThreadLocal.new { STDERR }
 
-    def with_default_restarts(&block)
-      with_restarts(default_restarts) {
-        block.call
-      }
-    end
+  module_function
 
-    def available_restarts
-      @restarts_stack.value.last
-    end
-    
-    def find_restart(name)
-      compute_restarts[name]
-    end
-
-    def invoke_restart(name, *args)
-      find_restart(name).call(*args)
-    end
-
-    class Restart < Proc
-      attr_accessor :report
-    end
-
-    def restart(report, &block)
-      Restart.new(&block).tap { |it| it.report = report }
-    end
-
-    attr_accessor :default_handler, :default_restarts
-
-    def stream
-      STDERR
-    end
-
-    private
-
-    def remove_raise
-      Object.instance_eval {
-        remove_method(:raise)
-      }
-    end
-    
-    def find_handler(exception)
-      handlers = @handler_stack.value.last
-      if handler = handlers[exception]
-        handler
-      else
-        # find a superclass handler
-        catch(done = gensym) {
-          ancestors =
-            if exception.is_a? String
-              RuntimeError
-            elsif exception.is_a? Exception
-              exception.class
-            else
-              exception
-            end.ancestors
-          handlers.each { |klass, handler|
-            if ancestors.include?(klass)
-              throw done, handler
-            end
-          }
-          nil # not found
-        }
-      end
-    end
-
-    def create_backtrace(exception)
-      begin
-        raise exception
-      rescue => excpetion
-      end
-    end
-    
-    def define_raise
-      Object.instance_eval {
-        define_method(:raise) { |exception, *args|
-          Cond.instance_eval {
-            if handler = find_handler(exception)
-              begin
-                remove_raise
-                create_backtrace(exception)
-                handler.call(exception, *args)
-              ensure
-                define_raise
-              end
-            else
-              remove_raise
-              raise exception, *args
-            end
-          }
-        }
-      }
-    end
-
-    ###################################################################
-    #
-    # Wrappers for methods of built-in classes.
-    #
-    # Since these methods are written in C, our trick of redefining
-    # raise does not work, as the call to the built-in raise method is
-    # hard-codedly bound.
-    #
-    # As a workaround, wrap every method with a rescue-all/re-raise
-    # block.
-    #
-    # Due to performance worries, these wrappers are only installed
-    # when $DEBUG is true.
-    #
-    ###################################################################
-
-    def exception_wrapper
-      begin
-        yield
-      rescue => exception
-        raise exception
-      end
-    end
-    
-    WRAPPER_FLAG = :has_exception_wrapper?
-    
-    def exception_wrap_method(klass, method)
-      unless klass.singleton_class.respond_to?(WRAPPER_FLAG)
-        klass.instance_eval {
-          old_method = instance_method(method)
-          remove_method(method)
-          define_method(method) { |*args, &block|
-            Cond.call_private(:exception_wrapper) {
-              old_method.bind(self).call(*args, &block)
-            }
-          }
-          singleton_class.instance_eval {
-            define_method(WRAPPER_FLAG) {
-              true
-            }
-          }
-        }
-      end
-    end
-    
-    def exception_wrap_classes(*klasses)
-      klasses.each { |klass|
-        klass.public_instance_methods(false).each { |method|
-          if method != "raise"
-            exception_wrap_method(klass, :"#{method}")
-          end
-        }
-      }
-    end
-    
-    SELECTED_BUILTINS = [
-      Array,
-      Binding,
-      Dir,
-      File::Stat,
-      File,
-      Hash,
-      IO,
-      MatchData,
-      Range,
-      Regexp,
-      String,
-      Struct,
-      Struct::Tms,
-      Time,
-    ]
-
-    def exception_wrap_builtins
-      exception_wrap_classes(*SELECTED_BUILTINS)
+  def with_handlers(handlers)
+    @handlers_stack.push(@handlers_stack.top.merge(handlers))
+    begin
+      yield
+    ensure
+      @handlers_stack.pop
     end
   end
   
-  ###################################################################
-  #
-  # module Cond
-  #
-  ###################################################################
-
-  @handler_stack, @restarts_stack = (1..2).map {
-    ThreadLocal.new { [Hash.new] }
-  }
-
-  @first_call = true
-
-  ###################################################################
-  # Default handler
-  ###################################################################
-  
-  @default_handler = lambda { |exception, *args|
-    puts exception.backtrace.last
-    if exception.respond_to? :report
-      stream.puts(exception.report + "\n")
+  def with_restarts(restarts)
+    @restarts_stack.push(@restarts_stack.top.merge(restarts))
+    begin
+      yield
+    ensure
+      @restarts_stack.pop
     end
+  end
     
-    restarts = available_restarts.keys.map { |name|
-      name.to_s
-    }.sort.map { |name|
-      { :name => name, :func => available_restarts[name.to_sym] }
+  def with_default_handlers(&block)
+    with_handlers(default_handlers) {
+      block.call
     }
-    
-    catch(:default_handler_loop) {
-      index = catch(done = gensym) {
-        loop {
-          restarts.each_with_index { |restart, index|
-            report =
-            if (f = restart[:func]).respond_to?(:report) and f.report != ""
-              f.report
-            else
-              ""
-            end + " "
-            stream.printf(
-              "%3d: %s(:%s)\n",
-              index, report, restart[:name])
+  end
+
+  def with_default_restarts(&block)
+    with_restarts(default_restarts) {
+      block.call
+    }
+  end
+
+  def debugger
+    restarts = {
+      :leave_debugger => restart("Leave #{self}.debugger") {
+        throw :leave_debugger
+      }
+    }
+    catch(:leave_debugger) {
+      with_default_handlers {
+        with_default_restarts {
+          with_restarts(restarts) {
+            yield
           }
-          stream.print "> "
-          input = STDIN.readline.trim
-          if input =~ %r!\A\d+\Z! and
-              (0...restarts.size).include?(input.to_i)
-            throw done, input.to_i
-          end
         }
       }
-      restarts[index][:func].call(exception)
+    }
+  end
+
+  def available_restarts
+    @restarts_stack.top
+  end
+    
+  def find_restart(name)
+    available_restarts[name]
+  end
+
+  def invoke_restart(name, *args)
+    find_restart(name).call(*args)
+  end
+
+  class Restart < Proc
+    attr_accessor :report
+  end
+
+  class Handler < Proc
+    attr_accessor :report
+  end
+
+  def restart(report = "", &block)
+    Restart.new(&block).tap { |t| t.report = report }
+  end
+
+  def handler(report = "", &block)
+    Handler.new(&block)
+  end
+  
+  def find_handler(exception)
+    handler = @handlers_stack.top[exception]
+    if handler
+      handler
+    else
+      # find a superclass handler
+      catch(found = gensym) {
+        ancestors = (
+          if exception.is_a? String
+            RuntimeError
+          elsif exception.is_a? Exception
+            exception.class
+          else
+            exception
+          end
+        ).ancestors
+        @handlers_stack.top.each { |klass, inner_handler|
+          if ancestors.include?(klass)
+            throw found, inner_handler
+          end
+        }
+        # not found
+        nil
+      }
+    end
+  end
+
+  def wrap_instance_method(mod, method)
+    mod.module_eval {
+      original = instance_method(method)
+      remove_method(method)
+      define_method(method) { |*args, &block|
+        begin
+          original.bind(self).call(*args, &block)
+        rescue Exception => e
+          raise e
+        end
+      }
+    }
+  end
+
+  def wrap_singleton_method(mod, method)
+    wrap_instance_method(mod.singleton_class, method)
+  end
+
+  def default_handlers     ; @default_handlers.value     end
+  def default_restarts     ; @default_restarts.value     end
+  def stream               ; @stream.value               end
+
+  def default_handlers=(t) ; @default_handlers.value = t end
+  def default_restarts=(t) ; @default_restarts.value = t end
+  def stream=(t)           ; @stream.value = t           end
+
+  default_handler = lambda { |*args|
+    exception = args.first
+    stream.puts exception.inspect
+    stream.puts exception.backtrace.last
+    if exception.respond_to? :report
+      stream.puts(exception.report)
+      stream.puts
+    end
+    
+    restarts = available_restarts.keys.map(&:to_s).sort.map { |name|
+      {
+        :name => name,
+        :func => available_restarts[name.to_sym],
+      }
+    }
+    
+    index = loop_with { |done, again|
+      restarts.each_with_index { |restart, inner_index|
+        report = let {
+          t = restart[:func]
+          if t.respond_to?(:report) and t.report != ""
+            t.report + " "
+          else
+            ""
+          end
+        }
+        stream.printf(
+          "%3d: %s(:%s)\n",
+          inner_index, report, restart[:name]
+        )
+      }
+      stream.print "> "
+      input = STDIN.readline.strip
+      if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
+        throw done, input.to_i
+      end
+    }
+    restarts[index][:func].call(exception)
+  }
+
+  @default_handlers = ThreadLocal.new {
+    {
+      Exception => default_handler
     }
   }
 
-  ###################################################################
-  # Default restarts
-  ###################################################################
-  
-  @default_restarts = {
-    :raise => restart("Raise this exception.") { |exception|
-      raise exception
-    },
-    :eval => restart("Run some code.") {
-      print("Enter code: ")
-      eval(STDIN.readline.trim)
-    },
-    :exit => restart("Exit.") {
-      exit
-    },
-    :backtrace => restart("Show backtrace.") { |exception|
-      puts exception.backtrace
-      throw :default_handler_loop
-    },
+  @default_restarts = ThreadLocal.new {
+    {
+      :raise => restart("Raise this exception.") { |exception|
+        raise
+      },
+      :eval => restart("Run some code.") {
+        stream.print("Enter code: ")
+        eval(STDIN.readline.strip)
+      },
+      :backtrace => restart("Show backtrace.") { |exception|
+        stream.puts exception.backtrace
+      },
+    }
+  }
+end
+
+module Kernel
+  alias_method :cond_original_raise, :raise
+
+  exception_inside_handler = Cond::ThreadLocalStack.new
+
+  define_method(:raise) { |*args|
+    if exception_inside_handler.top
+      if args.empty?
+        cond_original_raise(*exception_inside_handler.top)
+      else
+        cond_original_raise(*args)
+      end
+    else
+      handler = Cond.find_handler(args.first)
+      if handler
+        # raise/rescue to generate exception.backtrace
+        begin
+          cond_original_raise(*args)
+        rescue Exception => exception
+        end
+        
+        backtrace_args = [exception, *args.tail]
+        exception_inside_handler.push(backtrace_args)
+        begin
+          handler.call(*backtrace_args)
+        ensure
+          exception_inside_handler.pop
+        end
+      else
+        cond_original_raise(*args)
+      end
+    end
   }
 end

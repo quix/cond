@@ -1,25 +1,15 @@
 
 require 'thread'
 
-module Kernel
-  def singleton_class
-    class << self
-      self
-    end
-  end
+module Cond
+end
+
+module Cond::Util
+  module_function
 
   def let
     yield self
   end
-
-  unless respond_to? :tap
-    def tap
-      yield self
-      self
-    end
-  end
-
-  private
 
   def system_or_raise(*args)
     unless system(*args)
@@ -50,7 +40,7 @@ module Kernel
       }
       "#{prefix}#{count}".to_sym
     }
-    private method_name
+    module_function method_name
   }
 
   def loop_with(done = gensym, restart = gensym)

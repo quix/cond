@@ -1,7 +1,7 @@
 
-require 'quix/thread_local'
+require 'cond/thread_local'
 
-module Quix
+module Cond
   class ThreadLocalStack
     def initialize
       @stack = ThreadLocal.new { Array.new }

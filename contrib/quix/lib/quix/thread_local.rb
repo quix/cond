@@ -1,9 +1,11 @@
 
 require 'thread'
-require 'quix/kernel'
+require 'cond/util'
 
-module Quix
+module Cond
   class ThreadLocal
+    include Util
+
     #
     # The block should create a new object (if not, the returned
     # object will be shared across threads, which rather defeats the

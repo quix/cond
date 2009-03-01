@@ -1,0 +1,153 @@
+
+= Cond
+
+== Description
+
+A condition system for error handling in Ruby, modeled after the
+Common Lisp condition system.
+
+== Synopsis
+  
+  require 'cond'
+
+  def divide(x, y)
+    restarts = {
+      :return_this_instead => Cond.restart { |value|
+        return value
+      }
+    }
+    
+    Cond.with_restarts(restarts) {
+      raise ZeroDivisionError if y == 0
+      x/y
+    }
+  end
+  
+  handlers = {
+    ZeroDivisionError => Cond.handler {
+      Cond.invoke_restart(:return_this_instead, 42)
+    }
+  }
+  
+  Cond.with_handlers(handlers) {
+    puts divide(10, 2)  # => 5
+    puts divide(18, 3)  # => 6
+    puts divide(4, 0)   # => 42
+    puts divide(7, 0)   # => 42
+  }
+
+== Examples
+
+First read examples/handlers.rb and examples/restarts.rb, then
+test/test_*.rb.
+
+== Overview
+
+The condition system allows errors to be handled near the place where
+they occur, _before_ the stack unwinds.
+
+The system is divided into two parts: _restarts_ and _handlers_.
+Restarts are like open outlets which dwell near code that could raise
+an exception.  Handlers are like wires connecting upper-level code
+(code higher in the stack) to these outlets.
+
+When an exception is raised and there is registered handler for the
+exception, the normal raise mechanism of unwinding the stack is
+suspended while the handler is called instead.  At this time, the
+handler may invoke one of the available restarts.
+
+              (1) program start  -> +
+                                    |
+                                    |
+                                    |
+                                    | .- handler_a 
+                                    |/             
+      (2) handlers set up here ---> +--- handler_b 
+                                    |\             
+                                    | .- handler_c -----+
+                                    |       .           |
+                                    |      /|\          |
+                                    |       |           |
+                                    |       |           | (5) handler 
+                                    |       |           |     calls
+                                    |       |           |     restart
+                                    |       |           |
+           +--------->------------- | ------+           |
+           |                        |  (4) exception    |
+           |                        |      sent to      |
+           |                        |      handler      |
+           |                        |                   |
+           |                        |                   |
+           |                        |                   |
+           |                        | .- restart_x      |
+           ^                        |/                  |
+  (3) exception raised here ------> +--- restart_y <----+
+                                     \            
+                                      .- restart_z
+
+By plugging into a restart, a handler may find a way to negate the
+problem so that execution may continue as normal from the point where
+the exception was raised.  Or a handler may choose to allow the
+exception to be raised as normal, as if the handler was never called.
+
+A handler may call any of the available restarts.
+
+Each thread keeps its own stack of handlers and restarts.  All
+operations should be thread-safe to the degree client code is
+thread-safe.
+
+The basics of the condition system are explained in Peter Seibel's
+"Practical Common Lisp" here:
+
+http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
+
+A few examples found there have been translated to Ruby in
+examples/seibel_pcl.rb.
+
+=== Limitations
+
+Because the implementation redefines <code>Kernel#raise</code>, there
+must be a call to +raise+ inside Ruby code (as opposed to C code) for
+a handler to be invoked.
+
+The synopsis gives an example: Why is there a check for division by
+zero when ZeroDivisionError would be raised anyway?  Because Fixnum#/
+is written in C.
+
+It is still possible for handlers to intercept these raises, but it
+requires redefining a wrapped version of the method in question:
+
+  Cond.wrap_instance_method(Fixnum, :/)
+
+Once this has been called, the line
+
+  raise ZeroDivisionError if y == 0
+
+may be removed.
+
+== Author
+
+* James M. Lawrence <quixoticsycophant@gmail.com>
+
+== License
+
+Copyright (c) 2009 James M. Lawrence.  All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
