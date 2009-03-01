@@ -1,61 +1,65 @@
 
 require 'thread'
 
-module Quix
-  module Kernel
-    def let
+module Kernel
+  def singleton_class
+    class << self
+      self
+    end
+  end
+
+  def let
+    yield self
+  end
+
+  unless respond_to? :tap
+    def tap
       yield self
+      self
     end
+  end
 
-    def singleton_class
-      class << self
-        self
-      end
+  private
+
+  def system_or_raise(*args)
+    unless system(*args)
+      raise "system(*#{args.inspect}) failed with exit status #{$?.exitstatus}"
     end
+  end
 
-    module Gensym
-      @mutex = Mutex.new
-      @count = 0
+  let {
+    method_name = :gensym
+    mutex = Mutex.new
+    count = 0
 
-      def gensym(prefix = nil)
-        count = Gensym.module_eval {
-          @mutex.synchronize {
-            @count += 1
-          }
+    define_method(method_name) { |*args|
+      # workaround for no default args
+      prefix = (
+        case args.size
+        when 0
+          :G
+        when 1
+          args.first
+        else
+          raise ArgumentError, "wrong number of arguments (#{args.size} for 1)"
+        end
+      )
+
+      mutex.synchronize {
+        count += 1
+      }
+      "#{prefix}#{count}".to_sym
+    }
+    private method_name
+  }
+
+  def loop_with(done = gensym, restart = gensym)
+    catch(done) {
+      while true
+        catch(restart) {
+          yield(done, restart)
         }
-        "#{prefix || :G}_#{count}_#{rand}".to_sym
       end
-    end
-    include Gensym
-
-    def call_private(method, *args, &block)
-      instance_eval { send(method, *args, &block) }
-    end
-
-    def with_warnings(value = true)
-      previous = $VERBOSE
-      $VERBOSE = value
-      begin
-        yield
-      ensure
-        $VERBOSE = previous
-      end
-    end
-
-    def no_warnings(&block)
-      with_warnings(false, &block)
-    end
-
-    def abort_on_exception(value = true)
-      previous = Thread.abort_on_exception
-      Thread.abort_on_exception = value
-      begin
-        yield
-      ensure
-        Thread.abort_on_exception = previous
-      end
-    end
-
-    extend self
+    }
   end
 end

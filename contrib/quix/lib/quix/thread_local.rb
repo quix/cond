@@ -4,8 +4,11 @@ require 'quix/kernel'
 
 module Quix
   class ThreadLocal
-    include Quix::Kernel
-
+    #
+    # The block should create a new object (if not, the returned
+    # object will be shared across threads, which rather defeats the
+    # purpose).
+    #
     def initialize(prefix = nil, &default)
       @name = gensym(prefix)
       @accessed = gensym(prefix)

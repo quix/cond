@@ -1,8 +1,10 @@
 
-require 'quix/builtin/kernel/tap'
+require 'quix/kernel'
 
 module Quix
   module Diagnostic
+    module_function
+
     def show(desc = nil, stream = STDOUT, &block)
       if desc
         stream.puts(desc)
@@ -37,8 +39,6 @@ module Quix
       def debugging? ; end
       def trace(*args) ; end
     end
-
-    extend self
   end
 end
 

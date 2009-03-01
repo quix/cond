@@ -2,7 +2,6 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
 require 'test/unit'
 require 'quix/vars'
-require 'quix/hash_struct'
 
 class TestVars < Test::Unit::TestCase
   include Quix::Vars
@@ -12,7 +11,7 @@ class TestVars < Test::Unit::TestCase
     b = Object.new
     c = lambda { a + 11 }
 
-    hash = locals_to_hash {%{a, b, c}}
+    hash = locals_to_hash {%{a b c}}
 
     assert_equal(a.object_id, hash[:a].object_id)
     assert_equal(b.object_id, hash[:b].object_id)
@@ -79,7 +78,7 @@ class TestVars < Test::Unit::TestCase
     assert(!defined?(@b))
     assert(!defined?(@c))
     
-    locals_to_ivs {%{a, b, c}}
+    locals_to_ivs {%{a b c}}
 
     assert_equal(a.object_id, @a.object_id)
     assert_equal(b.object_id, @b.object_id)
@@ -107,6 +106,21 @@ class TestVars < Test::Unit::TestCase
 
     assert_equal(hash[:f].call, 44)
     assert_nothing_raised { hash_to_ivs { nil } }
+  end
+
+  class A
+    def initialize
+      @x = 22
+      @y = 33
+    end
+  end
+
+  def test_pull_ivs
+    assert_equal(nil, @x)
+    assert_equal(nil, @y)
+    pull_ivs { A.new }
+    assert_equal(22, @x)
+    assert_equal(33, @y)
   end
 
   def test_config_to_hash
@@ -141,47 +155,5 @@ class TestVars < Test::Unit::TestCase
     assert_equal(hash[:d].object_id, hash[:d_object_id])
     assert_equal(hash[:e].object_id, hash[:e_object_id])
     assert_equal(hash[:f].object_id, hash[:f_object_id])
-  end
-
-  def test_hash_struct
-    hash = {
-      :a => {
-        :b => :c,
-        :d => :e,
-        :f => {
-          :g => :h,
-          :i => :j,
-        },
-      },
-      :k => :l,
-      :m => [ :n, :o, :p ],
-      :q => {
-        :r => {},
-        :s => [],
-      },
-      :t => [
-        {
-          :u => :v,       
-          :w => :x,       
-        },
-      ],
-      :w => {
-        :x => {
-          :y => :z,
-        },
-      },
-    }
-    
-    s = Quix::HashStruct.recursive_new(hash)
-    assert_equal(s.a.b, :c)
-    assert_equal(s.a.d, :e)
-    assert_equal(s.a.f.g, :h)
-    assert_equal(s.a.f.i, :j)
-    assert_equal(s.k, :l)
-    assert_equal(s.m, [:n, :o, :p])
-    assert_equal(s.q.r, OpenStruct.new)
-    assert_equal(s.q.s, [])
-    assert_equal(s.t, [{ :u => :v, :w => :x }])
-    assert_equal(s.w.x.y, :z)
   end
 end
