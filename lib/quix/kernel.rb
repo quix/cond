@@ -35,16 +35,6 @@ module Kernel
     with_warnings(false, &block)
   end
 
-  def abort_on_exception(value = true)
-    previous = Thread.abort_on_exception
-    Thread.abort_on_exception = value
-    begin
-      yield
-    ensure
-      Thread.abort_on_exception = previous
-    end
-  end
-
   def system2(*args)
     unless system(*args)
       raise "system() failed with exit status #{$?.exitstatus}"
