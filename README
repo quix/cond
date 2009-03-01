@@ -94,7 +94,7 @@ exception to be raised as normal, as if the handler was never called.
 A handler may call any of the available restarts.
 
 Each thread keeps its own stack of handlers and restarts.  All
-operations should be thread-safe to the degree that client code is
+operations are thread-safe to the degree that client code is
 thread-safe.
 
 +Cond+ is modeled after the Common Lisp condition system, explained in

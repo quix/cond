@@ -3,6 +3,9 @@ require 'cond/util'
 require 'cond/invade'
 require 'cond/thread_local_stack'
 
+# 
+# Condition system for handling errors in Ruby.  See README.
+# 
 module Cond
   extend Util
 
@@ -15,6 +18,38 @@ module Cond
 
   module_function
 
+  #
+  # Register a set of handlers.  The given hash is merged with the
+  # set of current handlers.
+  #
+  # When the block exits, the previous set of handlers (if any) are
+  # restored.
+  #
+  # Example:
+  #
+  #   handlers = {
+  #     #
+  #     # We are able to handle Fred errors immediately; no need to unwind
+  #     # the stack.
+  #     #
+  #     FredError => proc {
+  #       # ...
+  #       puts "Handled a FredError. Continuing..."
+  #     },
+  #   
+  #     #
+  #     # We want to be informed of Wilma errors, but we can't handle them.
+  #     #
+  #     WilmaError => proc {
+  #       puts "Got a WilmaError. Re-raising..."
+  #       raise
+  #     },
+  #   }
+  #
+  #   Cond.with_handlers(handlers) {
+  #     # ...
+  #   }
+  #
   def with_handlers(handlers)
     @handlers_stack.push(@handlers_stack.top.merge(handlers))
     begin
@@ -24,6 +59,19 @@ module Cond
     end
   end
   
+  #
+  # Register a set of restarts.  The given hash is merged with the
+  # set of current restarts.
+  #
+  # When the block exits, the previous set of restarts (if any) are
+  # restored.
+  #
+  # Example:
+  #
+  #   Cond.with_restarts(:return_nil => Cond.restart { return nil }) {
+  #     # ..
+  #   }
+  #
   def with_restarts(restarts)
     @restarts_stack.push(@restarts_stack.top.merge(restarts))
     begin
@@ -33,19 +81,30 @@ module Cond
     end
   end
     
+  #
+  # A default handler is provided which runs a simple REPL loop when
+  # an exception is raised.
+  #
   def with_default_handlers(&block)
     with_handlers(default_handlers) {
       block.call
     }
   end
 
+  #
+  # Some some default restarts are provided.
+  #
   def with_default_restarts(&block)
     with_restarts(default_restarts) {
       block.call
     }
   end
 
-  def debugger
+  #
+  # Registers the default handlers and default restarts, and adds a
+  # restart to leave the REPL loop.
+  #
+  def debugger(&block)
     restarts = {
       :leave_debugger => restart("Leave #{self}.debugger") {
         throw :leave_debugger
@@ -55,42 +114,68 @@ module Cond
       with_default_handlers {
         with_default_restarts {
           with_restarts(restarts) {
-            yield
+            block.call
           }
         }
       }
     }
   end
 
+  #
+  # The current set of restarts which have been registered.
+  #
   def available_restarts
     @restarts_stack.top
   end
     
+  #
+  # Find a restart by name.
+  #
   def find_restart(name)
     available_restarts[name]
   end
 
+  #
+  # Call a restart; optionally pass it some arguments.
+  #
   def invoke_restart(name, *args)
     find_restart(name).call(*args)
   end
 
+  #
+  # Restart: an outlet to allow callers to hook into your code.
+  #
   class Restart < Proc
     attr_accessor :report
   end
 
+  #
+  # Handler: a function called when an exception is raised; invoke
+  # restarts from here.
+  #
   class Handler < Proc
     attr_accessor :report
   end
 
+  #
+  # Define a restart.  This is optional: you could just pass Procs to
+  # with_restarts, but you'll miss the description string shown inside
+  # the REPL Cond#debugger.
+  #
   def restart(report = "", &block)
     Restart.new(&block).tap { |t| t.report = report }
   end
 
+  #
+  # Define a handler.  This is optional: you could just pass Procs to
+  # with_handlers, but you'll miss whatever feature might use this
+  # description string.
+  #
   def handler(report = "", &block)
     Handler.new(&block)
   end
   
-  def find_handler(exception)
+  def find_handler(exception)  # :nodoc:
     handler = @handlers_stack.top[exception]
     if handler
       handler
@@ -117,6 +202,16 @@ module Cond
     end
   end
 
+  #
+  # Allow handlers to be called from C code by wrapping a method
+  # with begin/rescue.
+  #
+  # See the README.
+  #
+  # Example:
+  #
+  #   Cond.wrap_instance_method(Fixnum, :/)
+  #
   def wrap_instance_method(mod, method)
     mod.module_eval {
       original = instance_method(method)
@@ -131,6 +226,16 @@ module Cond
     }
   end
 
+  #
+  # Allow handlers to be called from C code by wrapping a method
+  # with begin/rescue.
+  #
+  # See the README.
+  #
+  # Example:
+  #
+  #   Cond.wrap_singleton_method(IO, :read)
+  #
   def wrap_singleton_method(mod, method)
     wrap_instance_method(mod.singleton_class, method)
   end
