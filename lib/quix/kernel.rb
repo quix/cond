@@ -21,20 +21,6 @@ module Kernel
 
   private
 
-  def with_warnings(value = true)
-    previous = $VERBOSE
-    $VERBOSE = value
-    begin
-      yield
-    ensure
-      $VERBOSE = previous
-    end
-  end
-
-  def no_warnings(&block)
-    with_warnings(false, &block)
-  end
-
   def system_or_raise(*args)
     unless system(*args)
       raise "system(*#{args.inspect}) failed with exit status #{$?.exitstatus}"
