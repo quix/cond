@@ -120,9 +120,9 @@ Because the implementation redefines <code>Kernel#raise</code>, there
 must be a call to +raise+ inside Ruby code (as opposed to C code) for
 a handler to be invoked.
 
-The synopsis gives an example: Why is there a check for division by
-zero when ZeroDivisionError would be raised anyway?  Because Fixnum#/
-is written in C.
+The above synopsis gives an example: Why is there a check for division
+by zero when ZeroDivisionError would be raised anyway?  Because
+Fixnum#/ is written in C.
 
 It is still possible for handlers to intercept these raises, but it
 requires redefining a wrapped version of the method in question:
