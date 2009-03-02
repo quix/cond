@@ -1,11 +1,10 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
 require 'test/unit'
-require 'quix/config'
+require 'quix/ruby'
 
 class TestDeps < Test::Unit::TestCase
   def test_deps
-    ruby = Config::CONFIG["ruby_executable"]
     root = File.expand_path("#{File.dirname(__FILE__)}/../lib")
     Dir["#{root}/**/*.rb"].map { |file|
       file.
@@ -15,7 +14,7 @@ class TestDeps < Test::Unit::TestCase
       unless file =~ %r!cygwin! and RUBY_PLATFORM !~ %r!cygwin!
         Dir.chdir(root) {
           assert(
-            system(ruby, "-r", file, "-e", ""),
+            Quix::Ruby.run("-r", file, "-e", ""),
             "error requiring: '#{file}'")
         }
       end

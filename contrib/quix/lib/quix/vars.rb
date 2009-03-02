@@ -1,6 +1,6 @@
 
 require 'quix/thread_local'
-require 'quix/kernel'
+require 'quix/ruby'
 require 'ostruct'
 
 module Cond
@@ -117,7 +117,7 @@ module Cond
       target.instance_eval {
         hash.each_pair { |name, value|
           ivar = "@#{name}"
-          existing_value = no_warnings {
+          existing_value = Ruby.no_warnings {
             instance_variable_get(ivar)
           }
           unless existing_value.nil?
