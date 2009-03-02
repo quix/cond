@@ -213,12 +213,12 @@ module Cond
   #   Cond.wrap_instance_method(Fixnum, :/)
   #
   def wrap_instance_method(mod, method)
+    original = gensym
     mod.module_eval {
-      original = instance_method(method)
-      remove_method(method)
+      alias_method original, method
       define_method(method) { |*args, &block|
         begin
-          original.bind(self).call(*args, &block)
+          send(original, *args, &block)
         rescue Exception => e
           raise e
         end
