@@ -1,7 +1,6 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
 require 'test/unit'
-require 'quix/config'
 require 'quix/kernel'
 
 if RUBY_VERSION >= "1.8.7"

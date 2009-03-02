@@ -1,6 +1,6 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
-require 'quix/config'
+require 'quix/ruby'
 
 def skip(test)
   # rspec fails on 1.9
@@ -12,7 +12,7 @@ end
 #
 Dir["#{File.dirname(__FILE__)}/test_*.rb"].each { |test|
   unless skip(test)
-    unless system(Config::CONFIG["ruby_executable"], test)
+    unless Quix::Ruby.run(test)
       raise "test failed: #{test}"
     end
   end

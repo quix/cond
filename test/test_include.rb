@@ -2,7 +2,7 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
 require 'test/unit'
 require 'open3'
-require 'quix/config'
+require 'quix/ruby'
 
 class TestInclude < Test::Unit::TestCase
   def test_include
@@ -29,9 +29,8 @@ class TestInclude < Test::Unit::TestCase
           include A
         end
       }
-      ruby = Config::CONFIG["ruby_executable"]
       begin
-        stdin, stdout, stderr = Open3.popen3("#{ruby} -d -")
+        stdin, stdout, stderr = Open3.popen3("#{Quix::Ruby::EXECUTABLE} -d -")
         stdin.puts(code)
         stdin.close_write
         assert_equal(stderr.readlines,
