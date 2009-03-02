@@ -42,6 +42,15 @@ Lisp condition system.
   examples/restarts.rb
   test/test_*.rb.
 
+== Install
+
+  % rake gem
+  % gem install pkg/cond-0.1.0.gem
+
+Or
+
+  % ruby install.rb [--uninstall]
+
 == Overview
 
 The condition system implemented by +Cond+ allows errors to be handled

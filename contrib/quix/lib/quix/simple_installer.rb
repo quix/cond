@@ -5,9 +5,9 @@ require 'find'
 require 'fileutils'
 require 'quix/vars'
   
-module Quix
+module Cond
   class SimpleInstaller
-    include Quix::Vars
+    include Cond::Vars
 
     def initialize
       dest_root = Config::CONFIG["sitelibdir"]
@@ -55,9 +55,8 @@ module Quix
     end
   
     def install_file?(source)
-      !File.symlink?(source) and
-        (File.directory?(source) or
-          (File.file?(source) and File.extname(source) == ".rb"))
+      (File.directory?(source) or
+       (File.file?(source) and File.extname(source) == ".rb"))
     end
 
     attr_accessor :spec

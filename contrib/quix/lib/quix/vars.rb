@@ -3,7 +3,7 @@ require 'quix/thread_local'
 require 'quix/kernel'
 require 'ostruct'
 
-module Quix
+module Cond
   module Vars
     module_function
 
