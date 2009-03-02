@@ -40,7 +40,7 @@ Lisp condition system.
 
   examples/handlers.rb
   examples/restarts.rb
-  test/test_*.rb.
+  test/test_*.rb
 
 == Install
 
