@@ -61,7 +61,7 @@ Restarts are like open outlets which dwell near code that could raise
 an exception.  Handlers are like wires connecting upper-level code
 (higher in the stack) to these outlets.
 
-When an exception is raised and there is registered handler for the
+When an exception is raised and there is a registered handler for the
 exception, the normal raise mechanism of unwinding the stack is
 suspended while the handler is called instead.  At this time, the
 handler may invoke one of the available restarts.
