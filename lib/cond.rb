@@ -203,8 +203,8 @@ module Cond
   end
 
   #
-  # Allow handlers to be called from C code by wrapping a method
-  # with begin/rescue.
+  # Allow handlers to be called from C code by wrapping a method with
+  # begin/rescue.  Returns the aliased name of the original method.
   #
   # See the README.
   #
@@ -213,22 +213,23 @@ module Cond
   #   Cond.wrap_instance_method(Fixnum, :/)
   #
   def wrap_instance_method(mod, method)
-    original = gensym
-    mod.module_eval {
-      alias_method original, method
-      define_method(method) { |*args, &block|
-        begin
-          send(original, *args, &block)
-        rescue Exception => e
-          raise e
-        end
+    "cond_original_#{mod.name}_#{method}_#{gensym}".to_sym.tap { |original|
+      mod.module_eval {
+        alias_method original, method
+        define_method(method) { |*args, &block|
+          begin
+            send(original, *args, &block)
+          rescue Exception => e
+            raise e
+          end
+        }
       }
     }
   end
 
   #
-  # Allow handlers to be called from C code by wrapping a method
-  # with begin/rescue.
+  # Allow handlers to be called from C code by wrapping a method with
+  # begin/rescue.  Returns the aliased name of the original method.
   #
   # See the README.
   #
