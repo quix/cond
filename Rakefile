@@ -35,7 +35,10 @@ end
 # test
 
 task :test do
-  require './test/all'
+  require 'test/all'
+  Dir["test/test_*.rb"].each { |file|
+    require file
+  }
 end
 
 ######################################################################

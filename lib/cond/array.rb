@@ -1,6 +1,8 @@
 
+require 'cond/module'
+
 class Array
-  unless [].respond_to? :tail
+  polite do
     def tail
       self[1..-1]
     end

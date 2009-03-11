@@ -1,8 +1,9 @@
 
+require 'quix/module'
 require 'thread'
 
 module Kernel
-  unless respond_to? :singleton_class
+  unless instance_method_defined? :singleton_class
     def singleton_class
       class << self
         self
@@ -10,14 +11,14 @@ module Kernel
     end
   end
 
-  unless respond_to? :tap
+  unless instance_method_defined? :tap
     def tap
       yield self
       self
     end
   end
 
-  unless respond_to? :let
+  unless instance_method_defined? :let
     def let
       yield self
     end
@@ -25,51 +26,42 @@ module Kernel
 
   private
 
-  unless respond_to? :system_or_raise
+  unless instance_method_defined? :system_or_raise
     def system_or_raise(*args)
       unless system(*args)
         raise "system(*#{args.inspect}) failed with status #{$?.exitstatus}"
       end
     end
   end
-
+  
   let {
-    method_name = :gensym
-    unless respond_to? method_name
+    name = :gensym
+    unless instance_method_defined? name
       mutex = Mutex.new
       count = 0
-
-      define_method(method_name) { |*args|
-        # workaround for no default args
-        prefix = (
-          case args.size
-          when 0
-            :G
-          when 1
-            args.first
-          else
-            raise(
-              ArgumentError,
-              "wrong number of arguments (#{args.size} for 1)"
-            )
-          end
-        )
-
+      define_method(name) { |*args|
         mutex.synchronize {
           count += 1
         }
-        "#{prefix}_#{count}".to_sym
+        case args.size
+        when 0
+          :"G#{count}"
+        when 1
+          :"|#{args.first}#{count}|"
+        else
+          raise ArgumentError, "wrong number of arguments (#{args.size} for 1)"
+        end
       }
-      private method_name
+      private name
     end
   }
 
-  unless respond_to? :loop_with
-    def loop_with(done = gensym, restart = gensym)
+  unless instance_method_defined? :loop_with
+    def loop_with(done = gensym, again = gensym)
       catch(done) {
         while true
-          catch(restart) {
-            yield(done, restart)
+          catch(again) {
+            yield(done, again)
           }
         end
       }
