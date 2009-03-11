@@ -13,7 +13,7 @@
 def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
-      entry = Cond.with_handlers(MalformedLogEntryError => proc { }) {
+      entry = Cond.with_handlers(MalformedLogEntryError => lambda { }) {
         parse_log_entry(text)
       }
       entry ? acc << entry : acc
@@ -34,7 +34,7 @@ parse_log_file(__FILE__)
 def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
-      entry = Cond.with_restarts(:skip_log_entry => proc { }) {
+      entry = Cond.with_restarts(:skip_log_entry => lambda { }) {
         parse_log_entry(text)
       }
       entry ? acc << entry : acc
@@ -56,7 +56,7 @@ Cond.debugger {
 # 
 def log_analyzer
   handlers = {
-    MalformedLogEntryError => proc {
+    MalformedLogEntryError => lambda {
       Cond.invoke_restart(:skip_log_entry)
     }
   }

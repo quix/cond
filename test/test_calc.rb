@@ -1,7 +1,5 @@
 require "#{File.dirname(__FILE__)}/common"
 
-include Cond::Util
-
 class DivergedError < StandardError
   attr_reader :epsilon
 
@@ -51,7 +49,7 @@ describe "A calculation which can signal a divergent state" do
       epsilon = 0.0005
 
       handlers = {
-        DivergedError => proc {
+        DivergedError => Cond.handler {
           epsilon += 0.001
           @memo.push :increase
           Cond.invoke_restart(:change_epsilon, epsilon)
@@ -80,7 +78,7 @@ describe "A calculation which can signal a divergent state" do
       epsilon = 1e-10
 
       handlers = {
-        DivergedError => proc {
+        DivergedError => Cond.handler {
           @memo.push :give_up
           Cond.invoke_restart(:give_up)
         }

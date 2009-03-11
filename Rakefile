@@ -70,24 +70,6 @@ def git(*args)
   sh(*cmd)
 end
 
-task :init_contrib do
-  unless `git remote`.split.include? "quix"
-    git(*%w!remote add -f quix git@github.com:quix/quix.git!)
-  end
-end
-
-task :add_contrib_first_time => :init_contrib do
-  git(*%w!merge --squash -s ours --no-commit quix/master!)
-  git(*%w!read-tree --prefix=contrib/quix -u quix/master!)
-  git("commit", "-m", "add quix utils")
-end
-
-task :run_pull_contrib do
-  git(*%w!pull --no-commit -s subtree quix master!)
-end
-
-task :pull_contrib => [ :init_contrib, :run_pull_contrib ]
-
 ######################################################################
 # publisher
 

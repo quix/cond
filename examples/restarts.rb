@@ -6,8 +6,6 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 require 'cond'
 require 'pp'
 
-include Cond::Util  # for loop_with
-
 class RestartableGethashError < RuntimeError
   def initialize(info)
     super()
@@ -30,10 +28,10 @@ end
 def restartable_gethash(hash, key, default = nil)
   restarts = {
     :continue => Cond.restart("Return not having found the value.") {
-      throw :done
+      throw :break
     },
     :try_again => Cond.restart("Try getting the key from the hash again.") {
-      throw :again
+      throw :next
     },
     :use_new_key => Cond.restart("Use a new key.") { |exception|
       key.replace read_new_value("key")
@@ -44,9 +42,8 @@ def restartable_gethash(hash, key, default = nil)
   }
 
   Cond.with_restarts(restarts) {
-    # simple loop utility:
-    # 'throw :done' is like 'break', 'throw :again' is like 'next'
-    loop_with(:done, :again) {
+    # 'throw :break' is like 'break', 'throw :next' is like 'next'
+    loop_with(:break, :next) {
       value = hash[key]
       if value
         return value
@@ -71,7 +68,7 @@ Cond.with_default_handlers {
 #  
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:67
+#  restart.rb:64
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -88,7 +85,7 @@ Cond.with_default_handlers {
 #
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:67
+#  restart.rb:64
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -106,7 +103,7 @@ Cond.with_default_handlers {
 #
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:67
+#  restart.rb:64
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",

@@ -2,13 +2,9 @@
 require 'rbconfig'
 require 'fileutils'
 require 'find'
-require 'fileutils'
-require 'quix/vars'
-  
-module Cond
-  class SimpleInstaller
-    include Cond::Vars
 
+module Quix
+  class SimpleInstaller
     def initialize
       dest_root = Config::CONFIG["sitelibdir"]
       sources = []
@@ -49,14 +45,20 @@ module Cond
             end
           }
   
-          acc << locals_to_hash {%{source dest install uninstall}}
+          acc << {
+            :source => source,
+            :dest => dest,
+            :install => install,
+            :uninstall => uninstall,
+          }
         end
       }
     end
   
     def install_file?(source)
-      (File.directory?(source) or
-       (File.file?(source) and File.extname(source) == ".rb"))
+      !File.symlink?(source) and
+        (File.directory?(source) or
+          (File.file?(source) and File.extname(source) == ".rb"))
     end
 
     attr_accessor :spec

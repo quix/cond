@@ -1,14 +1,12 @@
 
-require 'cond/util'
-require 'cond/invade'
+require 'cond/kernel'
+require 'cond/array'
 require 'cond/thread_local_stack'
 
 # 
 # Condition system for handling errors in Ruby.  See README.
 # 
 module Cond
-  extend Util
-
   @handlers_stack, @restarts_stack = (1..2).map {
     ThreadLocalStack.new.tap { |t| t.push(Hash.new) }
   }
@@ -32,7 +30,7 @@ module Cond
   #     # We are able to handle Fred errors immediately; no need to unwind
   #     # the stack.
   #     #
-  #     FredError => proc {
+  #     FredError => Cond.handler {
   #       # ...
   #       puts "Handled a FredError. Continuing..."
   #     },
@@ -40,7 +38,7 @@ module Cond
   #     #
   #     # We want to be informed of Wilma errors, but we can't handle them.
   #     #
-  #     WilmaError => proc {
+  #     WilmaError => Cond.handler {
   #       puts "Got a WilmaError. Re-raising..."
   #       raise
   #     },
@@ -82,7 +80,7 @@ module Cond
   end
     
   #
-  # A default handler is provided which runs a simple REPL loop when
+  # A default handler is provided which runs a simple input loop when
   # an exception is raised.
   #
   def with_default_handlers(&block)
@@ -102,7 +100,7 @@ module Cond
 
   #
   # Registers the default handlers and default restarts, and adds a
-  # restart to leave the REPL loop.
+  # restart to leave the input loop.
   #
   def debugger(&block)
     restarts = {
@@ -158,18 +156,18 @@ module Cond
   end
 
   #
-  # Define a restart.  This is optional: you could just pass Procs to
-  # with_restarts, but you'll miss the description string shown inside
-  # the REPL Cond#debugger.
+  # Define a restart.  This is optional: you could just pass lambdas
+  # or Procs to with_restarts, but you'll miss the description string
+  # shown inside Cond#debugger.
   #
   def restart(report = "", &block)
     Restart.new(&block).tap { |t| t.report = report }
   end
 
   #
-  # Define a handler.  This is optional: you could just pass Procs to
-  # with_handlers, but you'll miss whatever feature might use this
-  # description string.
+  # Define a handler.  This is optional: you could just pass lambdas
+  # or Procs to with_handlers, but you'll miss the description string
+  # shown by whatever tools that use it (currently none).
   #
   def handler(report = "", &block)
     Handler.new(&block)
@@ -214,15 +212,16 @@ module Cond
   #
   def wrap_instance_method(mod, method)
     "cond_original_#{mod.name}_#{method}_#{gensym}".to_sym.tap { |original|
-      mod.module_eval {
-        alias_method original, method
-        define_method(method) { |*args, &block|
+      # use eval since 1.8.6 cannot handle |&block|
+      mod.module_eval %{
+        alias_method :"#{original}", :"#{method}"
+        def #{method}(*args, &block)
           begin
-            send(original, *args, &block)
+            send(:"#{original}", *args, &block)
           rescue Exception => e
             raise e
           end
-        }
+        end
       }
     }
   end

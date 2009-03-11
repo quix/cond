@@ -11,7 +11,7 @@ handlers = {
   # We are able to handle Fred errors immediately; no need to unwind
   # the stack.
   #
-  FredError => proc {
+  FredError => Cond.handler {
     # ...
     puts "Handled a FredError. Continuing..."
   },
@@ -19,7 +19,7 @@ handlers = {
   #
   # We want to be informed of Wilma errors, but we can't handle them.
   #
-  WilmaError => proc {
+  WilmaError => Cond.handler {
     puts "Got a WilmaError. Re-raising..."
     raise
   },
@@ -28,9 +28,9 @@ handlers = {
   # If an error occurs during a Barney calculation, try twice more;
   # thereafter, give up.
   #
-  BarneyError => proc {
+  BarneyError => lambda {
     num_errors = 0
-    proc {
+    Cond.handler {
       num_errors += 1
       if num_errors < 3
         puts "Got BarneyError ##{num_errors}. Retrying..."
@@ -50,7 +50,7 @@ Cond.with_handlers(handlers) {
   #
   # We want to ignore Wilma errors here.
   # 
-  Cond.with_handlers(WilmaError => proc { puts "Ignored WilmaError." }) {
+  Cond.with_handlers(WilmaError => lambda { |*| puts "Ignored WilmaError." }) {
     raise WilmaError
     # => Ignored WilmaError.
     

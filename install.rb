@@ -1,5 +1,3 @@
-$VERBOSE = false  # harmless warnings due to symlinked requires
-$LOAD_PATH.unshift "./lib"
-$LOAD_PATH.unshift "./contrib/quix/lib"
+$LOAD_PATH.unshift "./support"
 require 'quix/simple_installer'
-Cond::SimpleInstaller.new.run
+Quix::SimpleInstaller.new.run

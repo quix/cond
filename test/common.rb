@@ -1,11 +1,10 @@
 
-HERE = File.dirname(__FILE__)
-$LOAD_PATH.unshift "#{HERE}/../lib"
-$LOAD_PATH.unshift HERE
+here = File.dirname(__FILE__)
+$LOAD_PATH.unshift "#{here}/../lib"
+$LOAD_PATH.unshift "#{here}/../support"
 
-require 'cond/test/ruby'
-require 'pathname'
 require 'cond'
+require 'pathname'
 
 # darn rspec warnings
 $VERBOSE = false

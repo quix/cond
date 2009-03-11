@@ -1,20 +1,24 @@
 
 require 'rbconfig'
-require 'cond/util'
+require 'quix/kernel'
 
-module Cond
-end
-
-module Cond::Test
+module Quix
   module Ruby
-    EXECUTABLE = File.join(
-      Config::CONFIG["bindir"],
-      Config::CONFIG["RUBY_INSTALL_NAME"]
-    )
+    EXECUTABLE = let {
+      name = File.join(
+        Config::CONFIG["bindir"],
+        Config::CONFIG["RUBY_INSTALL_NAME"]
+      )
+
+      if Config::CONFIG["host"] =~ %r!(mswin|cygwin|mingw)! and
+          File.basename(name) !~ %r!\.(exe|com|bat|cmd)\Z!i
+        name + ".exe"
+      else
+        name
+      end
+    }
 
     class << self
-      include Cond::Util
-
       def run(*args)
         system(EXECUTABLE, *args)
       end

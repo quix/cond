@@ -8,7 +8,7 @@ describe "basic handler/restart functionality" do
     memo = []
     
     handlers = {
-      ExampleError => proc {
+      ExampleError => Cond.handler {
         memo.push :handler
         Cond.invoke_restart(:example_restart, :x, :y)
       }
