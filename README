@@ -47,7 +47,7 @@ Lisp condition system.
   % rake gem
   % gem install pkg/cond-0.1.0.gem
 
-Or
+or
 
   % ruby install.rb [--uninstall]
 
@@ -137,7 +137,10 @@ is unnecessary.
 
 == Links
 
-* http://github.com/quix/cond/tree/master
+* Documentation: http://cond.rubyforge.org
+* Rubyforge home: http://rubyforge.org/projects/cond/
+* Manual download: http://rubyforge.org/frs/?group_id=7916
+* Repository: http://github.com/quix/cond/tree/master
 
 == Author
 
