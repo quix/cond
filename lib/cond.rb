@@ -173,29 +173,33 @@ module Cond
   end
   
   def find_handler(exception)  # :nodoc:
-    handler = @handlers_stack.top[exception]
-    if handler
-      handler
+    if exception.nil?
+      nil
     else
-      # find a superclass handler
-      catch(found = gensym) {
-        ancestors = (
-          if exception.is_a? String
-            RuntimeError
-          elsif exception.is_a? Exception
-            exception.class
-          else
-            exception
-          end
-        ).ancestors
-        @handlers_stack.top.each { |klass, inner_handler|
-          if ancestors.include?(klass)
-            throw found, inner_handler
-          end
+      handler = @handlers_stack.top[exception]
+      if handler
+        handler
+      else
+        # find a superclass handler
+        catch(:found) {
+          ancestors = (
+            if exception.is_a? String
+              RuntimeError
+            elsif exception.is_a? Exception
+              exception.class
+            else
+              exception
+            end
+          ).ancestors
+          @handlers_stack.top.each { |klass, inner_handler|
+            if ancestors.include?(klass)
+              throw :found, inner_handler
+            end
+          }
+          # not found
+          nil
         }
-        # not found
-        nil
-      }
+      end
     end
   end
 
@@ -316,13 +320,21 @@ module Kernel
 
   define_method(:raise) { |*args|
     if exception_inside_handler.top
+      # we are inside a handler
       if args.empty?
         cond_original_raise(*exception_inside_handler.top)
       else
         cond_original_raise(*args)
       end
     else
-      handler = Cond.find_handler(args.first)
+      # not inside a handler
+      handler = Cond.find_handler(
+        if args.empty?
+          $!
+        else
+          args.first
+        end
+      )
       if handler
         # raise/rescue to generate exception.backtrace
         begin
