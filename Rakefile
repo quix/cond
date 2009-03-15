@@ -50,7 +50,7 @@ Rake::GemPackageTask.new(GEMSPEC) { |t|
 # utils
 
 task :pull_utils do
-  %w[kernel stack thread_local].each { |stem|
+  %w[ext generator loop_with stack thread_local].each { |stem|
     basename = stem + ".rb"
     source = "../quix/lib/quix/" + basename
     dest = "lib/cond/" + basename

@@ -1,6 +1,4 @@
 
-require 'thread'
-
 module Cond
   module Ext
     unless respond_to? :tap

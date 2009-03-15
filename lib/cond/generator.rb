@@ -1,10 +1,12 @@
 
+require 'thread'
+
 module Cond
   module Generator
     module_function
 
-    def gensym(prefix = nil)
-      genstr(prefix).to_sym
+    def gensym(*args)
+      genstr(*args).to_sym
     end
 
     #
