@@ -82,18 +82,18 @@ module Cond
   # A default handler is provided which runs a simple input loop when
   # an exception is raised.
   #
-  def with_default_handlers(&block)
+  def with_default_handlers
     with_handlers(default_handlers) {
-      block.call
+      yield
     }
   end
 
   #
   # Some some default restarts are provided.
   #
-  def with_default_restarts(&block)
+  def with_default_restarts
     with_restarts(default_restarts) {
-      block.call
+      yield
     }
   end
 
@@ -101,7 +101,7 @@ module Cond
   # Registers the default handlers and default restarts, and adds a
   # restart to leave the input loop.
   #
-  def debugger(&block)
+  def debugger
     restarts = {
       :leave_debugger => restart("Leave #{self}.debugger") {
         throw :leave_debugger
@@ -111,7 +111,7 @@ module Cond
       with_default_handlers {
         with_default_restarts {
           with_restarts(restarts) {
-            block.call
+            yield
           }
         }
       }
