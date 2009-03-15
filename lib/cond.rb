@@ -1,9 +1,10 @@
 
-require 'cond/ext'
 require 'cond/thread_local'
 require 'cond/stack'
-require 'cond/defaults'
 require 'cond/loop_with'
+require 'cond/generator'
+require 'cond/ext'
+require 'cond/defaults'
 
 # 
 # Condition system for handling errors in Ruby.  See README.

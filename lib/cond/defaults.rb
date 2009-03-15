@@ -1,7 +1,4 @@
 
-require 'cond'
-require 'cond/loop_with'
-
 module Cond
   module Defaults
     include Ext
