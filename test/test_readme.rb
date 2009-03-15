@@ -1,4 +1,4 @@
-require "#{File.dirname(__FILE__)}/common"
+require File.dirname(__FILE__) + "/common"
 
 file = Pathname(__FILE__).dirname + ".." + "README"
 

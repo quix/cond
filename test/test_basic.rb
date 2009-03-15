@@ -1,4 +1,4 @@
-require "#{File.dirname(__FILE__)}/common"
+require File.dirname(__FILE__) + "/common"
 
 describe "basic handler/restart functionality" do
   it "should work" do

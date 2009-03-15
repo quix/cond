@@ -1,6 +1,6 @@
-require "#{File.dirname(__FILE__)}/common"
+require File.dirname(__FILE__) + "/common"
 
-describe "raise" do
+describe "the replacement raise" do
   it "should raise" do
     lambda {
       raise NameError
@@ -13,12 +13,22 @@ describe "raise" do
     }.should raise_error(RuntimeError)
   end
 
-  it "should handle three-argument form" do
+  it "should accept the three-argument form" do
     begin
       raise RuntimeError, "msg", ["zz"]
     rescue => e
       [e.class, e.message, e.backtrace].should == [RuntimeError, "msg", ["zz"]]
     end
+  end
+
+  it "should raise TypeError if the third arg is not array of strings" do
+    ex = nil
+    begin
+      raise RuntimeError, "zz", Hash.new
+    rescue Exception => ex
+      ex = ex
+    end
+    ex.class.should == TypeError
   end
 
   it "should raise TypeError for random junk arguments" do
@@ -51,25 +61,6 @@ describe "raise" do
     lambda {
       raise 27
     }.should raise_error(TypeError)
-  end
-
-  describe "if the third argument is not array of strings" do
-    before :all do
-      @ex = nil
-      begin
-        raise RuntimeError, "zz", Hash.new
-      rescue Exception => ex
-        @ex = ex
-      end
-    end
-
-    it "should raise TypeError " do
-      @ex.class.should == TypeError
-    end
-    
-    it "should give the expected message" do
-      @ex.message.should == "backtrace must be Array of String"
-    end
   end
 
   it "should be aliased to 'fail'" do

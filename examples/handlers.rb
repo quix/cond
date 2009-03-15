@@ -28,7 +28,7 @@ handlers = {
   # If an error occurs during a Barney calculation, try twice more;
   # thereafter, give up.
   #
-  BarneyError => lambda {
+  BarneyError => let {   # let { ... } is the same as lambda { ... }.call
     num_errors = 0
     Cond.handler {
       num_errors += 1
@@ -40,7 +40,7 @@ handlers = {
         raise
       end
     }
-  }.call
+  }
 }
 
 Cond.with_handlers(handlers) {

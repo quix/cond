@@ -1,4 +1,4 @@
-require "#{File.dirname(__FILE__)}/common"
+require File.dirname(__FILE__) + "/common"
 
 class DivergedError < StandardError
   attr_reader :epsilon
@@ -40,7 +40,7 @@ def calc(x, y, epsilon)
   }
 end
 
-describe "A calculation which can signal a divergent state" do
+describe "A calculation which can raise a divergent error," do
   describe "with a handler which increases epsilon" do
     before :all do
       @result = nil
@@ -61,7 +61,7 @@ describe "A calculation which can signal a divergent state" do
       }
     end
 
-    it "should converge after 10 epsilon increases" do
+    it "should converge after repeated epsilon increases" do
       @memo.should == (1..10).map { :increase }
     end
 

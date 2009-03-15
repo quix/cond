@@ -172,20 +172,16 @@ module Cond
     Handler.new(&block)
   end
   
-  def find_handler(target)  # :nodoc:
-    handler = @handlers_stack.top[target]
-    if handler
-      handler
-    else
-      ancestors = target.ancestors
+  def find_handler(target)
+    @handlers_stack.top.fetch(target) {
       @handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
-        if index = ancestors.index(klass)
+        if index = target.ancestors.index(klass)
           acc << [index, func]
         else
           acc
         end
-      }.sort_by { |e| e.first }.first.let { |t| t and t[1] }
-    end
+      }.sort_by { |t| t.first }.first.let { |t| t and t[1] }
+    }
   end
 
   #
@@ -268,6 +264,7 @@ module Cond
         )
       }
       stream.print "> "
+      stream.flush
       input = STDIN.readline.strip
       if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
         throw :done, input.to_i

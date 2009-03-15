@@ -1,7 +1,5 @@
-
-here = File.dirname(__FILE__)
-$LOAD_PATH.unshift "#{here}/../lib"
-$LOAD_PATH.unshift "#{here}/../support"
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../support"
 
 require 'cond'
 require 'pathname'
