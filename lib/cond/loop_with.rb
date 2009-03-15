@@ -3,10 +3,10 @@ module Cond
   module LoopWith
     module_function
     
-    def loop_with(done = nil, again = nil)
-      if done
+    def loop_with(leave = nil, again = nil)
+      if leave
         if again
-          catch(done) {
+          catch(leave) {
             while true
               catch(again) {
                 yield
@@ -14,7 +14,7 @@ module Cond
             end
           }
         else
-          catch(done) {
+          catch(leave) {
             while true
               yield
             end

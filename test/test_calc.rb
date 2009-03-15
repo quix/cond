@@ -20,11 +20,11 @@ def calc(x, y, epsilon)
       throw :again
     },
     :give_up => lambda {
-      throw :done, nil
+      throw :leave, nil
     },
   }
 
-  Cond.loop_with(:done, :again) {
+  Cond.loop_with(:leave, :again) {
     Cond.with_restarts(restarts) {
       # ...
       # ... some calculation
@@ -32,7 +32,7 @@ def calc(x, y, epsilon)
       if epsilon < 0.01
         raise DivergedError.new(epsilon)
       end
-      throw :done, 42
+      throw :leave, 42
     }
   }
 end

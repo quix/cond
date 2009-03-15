@@ -99,27 +99,27 @@ called.
 
 +Cond+ has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
 
-Each thread keeps its own stack of handlers and restarts.  All
-operations are thread-safe to the degree that client code is
-thread-safe.
+Each thread keeps its own list of handlers, restarts, and other data.
+All operations are fully thread-safe.
 
 It is not required to <tt>include Cond</tt>.  The methods of +Cond+
-are <tt>module_function</tt>s and are thus callable with
-<tt>Cond.handling</tt> etc.
+are <tt>module_function</tt>s and are thus callable via e.g.
+<tt>Cond.handling</tt>.
 
 Except for the (backward-compatible) redefinition of +Kernel#raise+,
 +Cond+ does not modify any of the standard classes.
 
 === Implementation
 
-The implementation is small and simple: it essentially consists of two
-per-thread stacks of hashes (handlers and restarts) and a redefinition
-of +raise+.
+The implementation is small and simple: it consists of two per-thread
+stacks of hashes (handlers and restarts) and a redefinition of
++raise+.
 
-The shiny syntax shown in the synopsis is a thin layer concealing the
-underlying hashes.  The code blocks are rearranged into something like
-the following raw form.  You are free to use either form according to
-the situation or the desired level of magic.
+The syntax shown in the synopsis is a thin layer concealing the
+underlying hashes.  The outcome of executing the +handling+/+handler+
+and +restartable+/+restart+ blocks is equivalent to the following raw
+form.  You are free to use either form according to the situation or
+the desired level of magic.
 
 === Raw Form
 
@@ -129,10 +129,10 @@ the situation or the desired level of magic.
   def divide(x, y)
     restarts = {
       :return_this_instead => lambda { |value|
-        throw :done, value
+        throw :leave, value
       }
     }
-    catch :done do
+    catch :leave do
       with_restarts restarts do
         raise ZeroDivisionError if y == 0
         x/y

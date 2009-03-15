@@ -147,7 +147,8 @@ module Cond
   def find_handler(target)
     Cond.handlers_stack.top.fetch(target) {
       Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
-        if index = target.ancestors.index(klass)
+        index = target.ancestors.index(klass)
+        if index
           acc << [index, func]
         else
           acc
@@ -285,8 +286,8 @@ module Cond
   # it returns an array.  When given one argument, it returns only
   # that argument (not an array).
   #
-  def done(*args)
-    Cond.code_section_stack.top.done(*args)
+  def leave(*args)
+    Cond.code_section_stack.top.leave(*args)
   end
 
   #
@@ -342,32 +343,33 @@ module Cond
 
   class CodeSection  #:nodoc:
     include LoopWith
+    include Generator
 
     def initialize(with_functions, &block)
       @with_functions = with_functions
       @block = block
-      @done, @again = (1..2).map { Generator.gensym }
+      @leave, @again = (1..2).map { gensym }
     end
 
     def again(*args)
       throw @again
     end
 
-    def done(*args)
+    def leave(*args)
       case args.size
       when 0
-        throw @done
+        throw @leave
       when 1
-        throw @done, args.first
+        throw @leave, args.first
       else
-        throw @done, args
+        throw @leave, args
       end
     end
 
     def run
-      loop_with(@done, @again) {
+      loop_with(@leave, @again) {
         Cond.send(@with_functions, Hash.new) {
-          throw @done, @block.call
+          throw @leave, @block.call
         }
       }
     end

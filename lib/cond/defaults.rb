@@ -7,8 +7,8 @@ module Cond
     include LoopWith
     extend LoopWith
 
-    DONE = Generator.gensym("default handler done")
-    AGAIN = Generator.gensym("default handler again")
+    LEAVE = Generator.gensym
+    AGAIN = Generator.gensym
 
     module_function
 
@@ -27,7 +27,7 @@ module Cond
         }
       }
       
-      index = loop_with(DONE, AGAIN) {
+      index = loop_with(LEAVE, AGAIN) {
         restarts.each_with_index { |restart, inner_index|
           message = let {
             t = restart[:func]
@@ -46,7 +46,7 @@ module Cond
         stream.flush
         input = STDIN.readline.strip
         if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
-          throw DONE, input.to_i
+          throw LEAVE, input.to_i
         end
       }
       restarts[index][:func].call(exception)

@@ -62,7 +62,7 @@ def parse_log_file(file)
     input.each_line.inject(Array.new) { |acc, text|
       entry = restartable do
         restart :skip_log_entry do
-          done
+          leave
         end
         parse_log_entry(text)
       end
