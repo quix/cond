@@ -9,21 +9,18 @@ describe Cond do
   describe "basic handler/restart functionality" do
     it "should work using the raw form" do
       memo = []
-    
       handlers = {
         ExampleError => lambda { |exception|
           memo.push :handler
           invoke_restart(:example_restart, :x, :y)
         }
       }
-      
       restarts = {
         :example_restart => lambda { |*args|
           memo.push :restart
           memo.push args
         }
       }
-      
       f = lambda {
         memo.push :f
         with_restarts(restarts) {
@@ -31,7 +28,6 @@ describe Cond do
           raise ExampleError
         }
       }
-    
       memo.push :first
       with_handlers(handlers) {
         f.call
@@ -46,7 +42,7 @@ describe Cond do
 
       f = lambda {
         restartable do
-          restart :example_restart do |*args|
+          on :example_restart do |*args|
             memo.push :restart
             memo.push args
           end
@@ -58,7 +54,7 @@ describe Cond do
     
       memo.push :first
       handling do
-        handle ExampleError do
+        on ExampleError do
           memo.push :handler
           invoke_restart :example_restart, :x, :y
         end

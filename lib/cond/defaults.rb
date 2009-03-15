@@ -7,8 +7,8 @@ module Cond
     include LoopWith
     extend LoopWith
 
-    LEAVE = Generator.gensym
-    AGAIN = Generator.gensym
+    LEAVE = Generator.gensym("default leave")
+    AGAIN = Generator.gensym("default again")
 
     module_function
 
@@ -27,7 +27,7 @@ module Cond
         }
       }
       
-      index = loop_with(LEAVE, AGAIN) {
+      index = loop_with(LEAVE) {
         restarts.each_with_index { |restart, inner_index|
           message = let {
             t = restart[:func]
@@ -66,11 +66,9 @@ module Cond
         :eval => Cond::Restart.new("Run some code.") {
           Cond.stream.print("Enter code: ")
           eval(STDIN.readline.strip)
-          throw AGAIN
         },
         :backtrace => Cond::Restart.new("Show backtrace.") { |exception|
           Cond.stream.puts exception.backtrace
-          throw AGAIN
         },
       }
     end

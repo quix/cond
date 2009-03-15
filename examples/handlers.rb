@@ -11,7 +11,7 @@ handling do
   # We are able to handle Fred errors immediately; no need to unwind
   # the stack.
   #
-  handle FredError do
+  on FredError do
     # ...
     puts "Handled a FredError. Continuing..."
   end
@@ -19,7 +19,7 @@ handling do
   #
   # We want to be informed of Wilma errors, but we can't handle them.
   #
-  handle WilmaError do
+  on WilmaError do
     puts "Got a WilmaError. Re-raising..."
     raise
   end
@@ -31,7 +31,7 @@ handling do
     #
     # We want to ignore Wilma errors here.
     # 
-    handle WilmaError do
+    on WilmaError do
       puts "Ignored WilmaError."
     end
     
@@ -60,7 +60,7 @@ handling do
     # If an error occurs during a Barney calculation, try twice
     # more; thereafter, give up.
     #
-    handle BarneyError do
+    on BarneyError do
       num_errors += 1
       if num_errors == 3
         puts "Got BarneyError ##{num_errors}. Giving up..."

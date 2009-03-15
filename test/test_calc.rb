@@ -1,5 +1,7 @@
 require File.dirname(__FILE__) + "/common"
 
+include Cond
+
 class DivergedError < StandardError
   attr_reader :epsilon
 
@@ -14,48 +16,38 @@ class DivergedError < StandardError
 end
 
 def calc(x, y, epsilon)
-  restarts = {
-    :change_epsilon => lambda { |new_epsilon|
+  restartable do
+    on :change_epsilon do |new_epsilon|
       epsilon = new_epsilon
-      throw :again
-    },
-    :give_up => lambda {
-      throw :leave, nil
-    },
-  }
-
-  Cond.loop_with(:leave, :again) {
-    Cond.with_restarts(restarts) {
-      # ...
-      # ... some calculation
-      # ...
-      if epsilon < 0.01
-        raise DivergedError.new(epsilon)
-      end
-      throw :leave, 42
-    }
-  }
+      again
+    end
+    on :give_up do
+      leave
+    end
+    # ...
+    # ... some calculation
+    # ...
+    if epsilon < 0.01
+      raise DivergedError.new(epsilon)
+    end
+    42
+  end
 end
 
 describe "A calculation which can raise a divergent error," do
   describe "with a handler which increases epsilon" do
     before :all do
-      @result = nil
-      @memo = []
-
-      epsilon = 0.0005
-
-      handlers = {
-        DivergedError => lambda { |e|
+      handling do
+        @memo = []
+        @result = nil
+        epsilon = 0.0005
+        on DivergedError do
           epsilon += 0.001
           @memo.push :increase
-          Cond.invoke_restart(:change_epsilon, epsilon)
-        }
-      }
-
-      @result = Cond.with_handlers(handlers) {
-        calc(3, 4, epsilon)
-      }
+          invoke_restart :change_epsilon, epsilon
+        end
+        @result = calc(3, 4, epsilon)
+      end
     end
 
     it "should converge after repeated epsilon increases" do
@@ -69,21 +61,16 @@ describe "A calculation which can raise a divergent error," do
 
   describe "with a give-up handler and a too-small epsilon" do
     before :all do
-      @result = 9999
-      @memo = []
-
-      epsilon = 1e-10
-
-      handlers = {
-        DivergedError => lambda { |e|
+      handling do
+        @result = 9999
+        @memo = []
+        epsilon = 1e-10
+        on DivergedError do
           @memo.push :give_up
-          Cond.invoke_restart(:give_up)
-        }
-      }
-
-      @result = Cond.with_handlers(handlers) {
-        calc(3, 4, epsilon)
-      }
+          invoke_restart :give_up
+        end
+        @result = calc(3, 4, epsilon)
+      end
     end
 
     it "should give up" do

@@ -12,7 +12,7 @@ Handle exceptions without unwinding the stack.
   
   def divide(x, y)
     restartable do
-      restart :return_this_instead do |value|
+      on :return_this_instead do |value|
         return value
       end
       raise ZeroDivisionError if y == 0
@@ -21,7 +21,7 @@ Handle exceptions without unwinding the stack.
   end
   
   handling do
-    handle ZeroDivisionError do |exception|
+    on ZeroDivisionError do |exception|
       invoke_restart :return_this_instead, 42
     end
     puts divide(10, 2)  # => 5
@@ -116,10 +116,10 @@ stacks of hashes (handlers and restarts) and a redefinition of
 +raise+.
 
 The syntax shown in the synopsis is a thin layer concealing the
-underlying hashes.  The outcome of executing the +handling+/+handler+
-and +restartable+/+restart+ blocks is equivalent to the following raw
-form.  You are free to use either form according to the situation or
-the desired level of magic.
+underlying hashes.  The outcome of executing the +handling+/+on+ and
++restartable+/+on+ blocks is equivalent to the following raw form.
+You are free to use either form according to the situation or the
+desired level of magic.
 
 === Raw Form
 

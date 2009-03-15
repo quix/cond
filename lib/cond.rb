@@ -301,19 +301,13 @@ module Cond
   end
 
   #
-  # Define a restart while inside a +restartable+ section.
+  # While inside a +restartable+ section, define a restart.
+  # While inside a +handling+ section, define a handler.
   #
-  def restart(symbol, message = "", &block)
-    Cond.code_section_stack.top.restart(symbol, message, &block)
+  def on(symbol, message = "", &block)
+    Cond.code_section_stack.top.on(symbol, message, &block)
   end
 
-  #
-  # Define a handler while inside a +handling+ section.
-  #
-  def handle(symbol, message = "", &block)
-    Cond.code_section_stack.top.handle(symbol, message, &block)
-  end
-  
   #
   # Begin a restartable section of code.
   #
@@ -380,7 +374,7 @@ module Cond
       super(:with_restarts, &block)
     end
 
-    def restart(sym, message, &block)
+    def on(sym, message, &block)
       Cond.restarts_stack.top[sym] = Restart.new(message, &block)
     end
   end
@@ -390,7 +384,7 @@ module Cond
       super(:with_handlers, &block)
     end
 
-    def handle(sym, message, &block)
+    def on(sym, message, &block)
       Cond.handlers_stack.top[sym] = Handler.new(message, &block)
     end
   end
