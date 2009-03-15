@@ -1,10 +1,9 @@
 
 require 'rbconfig'
-require 'quix/kernel'
 
 module Quix
   module Ruby
-    EXECUTABLE = let {
+    EXECUTABLE = lambda {
       name = File.join(
         Config::CONFIG["bindir"],
         Config::CONFIG["RUBY_INSTALL_NAME"]
@@ -16,7 +15,7 @@ module Quix
       else
         name
       end
-    }
+    }.call
 
     class << self
       def run(*args)
@@ -24,7 +23,14 @@ module Quix
       end
 
       def run_or_raise(*args)
-        system_or_raise(EXECUTABLE, *args)
+        cmd = [EXECUTABLE, *args]
+        unless system(*cmd)
+          msg = (
+            "failed to launch ruby: " +
+            "system(*#{cmd.inspect}) failed with status #{$?.exitstatus}"
+          )
+          raise msg
+        end
       end
 
       def with_warnings(value = true)

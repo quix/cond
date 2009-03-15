@@ -1,6 +1,5 @@
 
 require 'cond/kernel'
-require 'cond/array'
 require 'cond/thread_local_stack'
 
 # 
@@ -331,7 +330,7 @@ module Kernel
         rescue Exception => exception
         end
         
-        backtrace_args = [exception, *args.tail]
+        backtrace_args = [exception, *args[1..-1]]
         exception_inside_handler.push(backtrace_args)
         begin
           handler.call(*backtrace_args)
