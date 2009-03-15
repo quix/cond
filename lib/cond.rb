@@ -246,81 +246,82 @@ module Cond
   end
 
   ######################################################################
-  # glossy coating
+  # glossy exterior
 
   def restartable(&block)
     section = RestartableSection.new
     section.instance_eval(&block)
-    section.__run__
+    section.instance_eval { __run__ }
   end
   
   def handling(&block)
     section = HandlingSection.new
     section.instance_eval(&block)
-    section.__run__
+    section.instance_eval { __run__ }
   end
 
-  class RestartableSection
-    def initialize
-      @restarts = Hash.new
-      @done, @again = (1..2).map { Generator.gensym }
-      @body_args = []
-    end
-    
-    def body(*args, &block)
-      @body = block
-    end
-    
-    def restart(sym, message = "", &block)
-      @restarts[sym] = Cond.restart(message, &block)
+  class CodeSection
+    include LoopWith
+
+    private
+
+    def initialize(with_functions)
+      @__with_functions = with_functions
+      @__functions = Hash.new
+      @__done, @__again = (1..2).map { Generator.gensym }
+      @__body_args = []
     end
 
+    def body(&block)
+      @__body = block
+    end
+    
     def again(*args)
-      @body_args = args
-      throw @again
+      @__body_args = args
+      throw @__again
     end
 
     def done(*args)
       case args.size
       when 0
-        throw @done
+        throw @__done
       when 1
-        throw @done, args.first
+        throw @__done, args.first
       else
-        throw @done, args
+        throw @__done, args
       end
     end
 
     def __run__
-      LoopWith.loop_with(@done, @again) {
-        Cond.with_restarts(@restarts) {
-          throw @done, @body.call(*@body_args)
+      loop_with(@__done, @__again) {
+        Cond.send(@__with_functions, @__functions) {
+          throw @__done, @__body.call(*@__body_args)
         }
       }
     end
   end
 
-  class HandlingSection
+  class RestartableSection < CodeSection
     def initialize
-      @handlers = Hash.new
+      super(:with_restarts)
     end
-    
-    def body(&block)
-      @body = block
+
+    def restart(sym, message = "", &block)
+      @__functions[sym] = Cond.restart(message, &block)
     end
-    
-    def handle(sym, &block)
-      @handlers[sym] = block
+  end
+
+  class HandlingSection < CodeSection
+    def initialize
+      super(:with_handlers)
+    end
+
+    def handle(sym, message = "", &block)
+      @__functions[sym] = Cond.handler(message, &block)
     end
 
     def invoke_restart(name, *args, &block)
       Cond.invoke_restart(name, *args, &block)
-    end
-    
-    def __run__
-      Cond.with_handlers(@handlers) {
-        @body.call
-      }
     end
   end
 end
