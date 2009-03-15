@@ -256,7 +256,7 @@ module Cond
       stream.puts
     end
     
-    restarts = available_restarts.keys.map(&:to_s).sort.map { |name|
+    restarts = available_restarts.keys.map { |t| t.to_s }.sort.map { |name|
       {
         :name => name,
         :func => available_restarts[name.to_sym],
