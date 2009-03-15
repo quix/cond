@@ -267,7 +267,7 @@ module Cond
       }
     }
     
-    index = loop_with { |done, again|
+    index = loop_with(:done, :again) {
       restarts.each_with_index { |restart, inner_index|
         report = let {
           t = restart[:func]
@@ -285,7 +285,7 @@ module Cond
       stream.print "> "
       input = STDIN.readline.strip
       if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
-        throw done, input.to_i
+        throw :done, input.to_i
       end
     }
     restarts[index][:func].call(exception)
