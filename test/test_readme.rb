@@ -7,13 +7,15 @@ file = here + ".." + "README"
 lib = (here + ".." + "lib").expand_path
 
 describe file do
-  it "should run as claimed" do
-    contents = file.read
-    expected = contents.scan(%r!\# => (.*?)\n!).flatten.join("\n")
-    code = (
-      "$LOAD_PATH.unshift '#{lib}'\n" +
-      contents.match(%r!^== Synopsis.*?\n(.*?)^==!m)[1]
-    )
-    pipe_to_ruby(code).chomp.should == expected
+  ["Synopsis", "Raw Form"].each do |section|
+    it "#{section} should run as claimed" do
+      contents = file.read
+      code = (
+        "$LOAD_PATH.unshift '#{lib}'\n" +
+        contents.match(%r!== #{section}.*?\n(.*?)^==!m)[1]
+      )
+      expected = code.scan(%r!\# => (.*?)\n!).flatten.join("\n")
+      pipe_to_ruby(code).chomp.should == expected
+    end
   end
 end

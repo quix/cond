@@ -9,7 +9,7 @@ Lisp condition system.
 == Synopsis
 
   require 'cond'
-  include Cond  # optional
+  include Cond
   
   def divide(x, y)
     restartable do
@@ -30,7 +30,7 @@ Lisp condition system.
       puts divide(4, 0)   # => 42
       puts divide(7, 0)   # => 42
     end
-    handle ZeroDivisionError do
+    handle ZeroDivisionError do |exception|
       invoke_restart :return_this_instead, 42
     end
   end
@@ -43,10 +43,9 @@ Lisp condition system.
 
 == Install
 
-  % rake gem
-  % gem install pkg/cond-0.1.0.gem
+  % gem install cond
 
-or
+or manually,
 
   % ruby install.rb [--uninstall]
 
@@ -99,12 +98,6 @@ restart, allow execution to continue as normal from the point where
 the exception was raised.  Or a handler may choose to allow the
 exception to be raised as normal, as if the handler was never called.
 
-A handler may call any of the available restarts.
-
-Each thread keeps its own stack of handlers and restarts.  All
-operations are thread-safe to the degree that client code is
-thread-safe.
-
 +Cond+ is modeled after the Common Lisp condition system, explained in
 Peter Seibel's "Practical Common Lisp":
 
@@ -113,15 +106,57 @@ http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restart
 A few examples given there have been translated to Ruby in
 examples/seibel_pcl.rb.
 
+== Implementation
+
+The implementation is very simple: it essentially consists of two
+per-thread stacks of hashes (handlers and restarts) and a redefinition
+of <tt>Kernel#raise</tt>.
+
+The shiny syntax shown in the synopsis is a thin layer concealing the
+underlying hashes.  The code blocks are rearranged into something like
+the following raw form.  You are free to use either form according to
+the situation or desired level of magic.
+
+=== Raw Form
+
+  require 'cond'
+  include Cond
+  
+  def divide(x, y)
+    restarts = {
+      :return_this_instead => lambda { |value|
+        throw :done, value
+      }
+    }
+    catch :done do
+      with_restarts restarts do
+        raise ZeroDivisionError if y == 0
+        x/y
+      end
+    end
+  end
+  
+  handlers = {
+    ZeroDivisionError => lambda { |exception|
+      invoke_restart :return_this_instead, 42
+    }
+  }
+  with_handlers handlers do
+    puts divide(10, 2)  # => 5
+    puts divide(18, 3)  # => 6
+    puts divide(4, 0)   # => 42
+    puts divide(7, 0)   # => 42
+  end
+
 === Limitations
 
-Because the implementation redefines <code>Kernel#raise</code>, there
-must be a call to +raise+ inside Ruby code (as opposed to C code) for
-a handler to be invoked.
+Because the implementation redefines +raise+, there must be a call to
++raise+ inside Ruby code (as opposed to C code) for a handler to be
+invoked.
 
 The above synopsis gives an example: Why is there a check for division
-by zero when ZeroDivisionError would be raised anyway?  Because
-Fixnum#/ is written in C.
+by zero when +ZeroDivisionError+ would be raised anyway?  Because
+<tt>Fixnum#/</tt> is written in C.
 
 It is still possible for handlers to intercept these raises, but it
 requires redefining a wrapped version of the method in question:
@@ -133,6 +168,22 @@ Once this has been called, the line
   raise ZeroDivisionError if y == 0
 
 is unnecessary.
+
+== Additional Notes
+
++Cond+ has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
+
+Each thread keeps its own stack of handlers and restarts.  All
+operations are thread-safe to the degree that client code is
+thread-safe.
+
+It is not required to <tt>include Cond</tt>.  The methods of +Cond+
+are <tt>module_function</tt>s and are thus callable by <tt>Cond.handling</tt>
+etc.
+
++Cond+ does not modify any of the standard classes except for the
+necessary redefinition of +raise+ and intentional uses of method
+wrapping as described in the previous section.
 
 == Links
 
