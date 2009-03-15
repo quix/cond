@@ -10,16 +10,6 @@ require 'cond/defaults'
 # Condition system for handling errors in Ruby.  See README.
 # 
 module Cond
-  include Ext
-  include LoopWith
-  include Generator
-
-  #
-  # Cond.invoke_restart was called with an unknown restart.
-  #
-  class NoRestartError < StandardError
-  end
-
   module_function
 
   #
@@ -96,7 +86,7 @@ module Cond
   end
 
   #
-  # Some some default restarts are provided.
+  # Some default restarts are provided.
   #
   def with_default_restarts
     with_restarts(Cond.default_restarts) {
@@ -140,7 +130,7 @@ module Cond
   end
 
   #
-  # Call a restart; optionally pass it some arguments.
+  # Call a restart from a handler; optionally pass it some arguments.
   #
   def invoke_restart(name, *args, &block)
     available_restarts.fetch(name) {
@@ -151,6 +141,27 @@ module Cond
     }.call(*args, &block)
   end
 
+  #
+  # Find the closest-matching handler for the given Exception.
+  #
+  def find_handler(target)
+    Cond.handlers_stack.top.fetch(target) {
+      Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+        if index = target.ancestors.index(klass)
+          acc << [index, func]
+        else
+          acc
+        end
+      }.sort_by { |t| t.first }.first.extend(Ext).let { |t| t and t[1] }
+    }
+  end
+
+  ######################################################################
+  # Restart and Handler 
+
+  #
+  # Base class for Restart and Handler.
+  #
   class MessageProc < Proc
     def initialize(message = "", &block)
       @message = message
@@ -164,28 +175,21 @@ module Cond
   #
   # A restart.  Use of this is optional: you could just pass lambdas
   # to with_restarts, but you'll miss the description string shown
-  # inside Cond#debugger.
+  # inside Cond#default_handler.
   #
-  Restart = MessageProc
+  class Restart < MessageProc
+  end
 
   #
   # A handler.  Use of this is optional: you could just pass lambdas
   # to with_handlers, but you'll miss the description string shown by
-  # whatever tools which use it (currently none).
+  # whichever tools might use it (currently none).
   #
-  Handler = MessageProc
-
-  def find_handler(target)
-    Cond.handlers_stack.top.fetch(target) {
-      Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
-        if index = target.ancestors.index(klass)
-          acc << [index, func]
-        else
-          acc
-        end
-      }.sort_by { |t| t.first }.first.extend(Ext).let { |t| t and t[1] }
-    }
+  class Handler < MessageProc
   end
+
+  ######################################################################
+  # wrapping
 
   #
   # Allow handlers to be called from C code by wrapping a method with
@@ -228,7 +232,16 @@ module Cond
     singleton_class = class << mod ; self ; end
     wrap_instance_method(singleton_class, method)
   end
+
+  ######################################################################
+  # errors
   
+  #
+  # Cond.invoke_restart was called with an unknown restart.
+  #
+  class NoRestartError < StandardError
+  end
+
   ######################################################################
   # singleton class
 
@@ -236,7 +249,10 @@ module Cond
     include LoopWith
     public :loop_with
 
-    [:handlers_stack, :restarts_stack, :code_section_stack].each { |name|
+    include Generator
+    public :gensym
+
+    [:handlers_stack, :restarts_stack].each { |name|
       include ThreadLocal.accessor_module(name) {
         Stack.new.extend(Ext).tap { |t| t.push(Hash.new) }
       }
@@ -256,8 +272,11 @@ module Cond
   end
 
   ######################################################################
-  # glossy exterior
+  # shiny exterior
 
+  #
+  # Begin a restartable section of code.
+  #
   def restartable(&block)
     section = RestartableSection.new
     Cond.code_section_stack.push(section)
@@ -269,6 +288,10 @@ module Cond
     end
   end
   
+  #
+  # Begin a section of code in which exceptions may be handled without
+  # unwinding the stack.
+  #
   def handling(&block)
     section = HandlingSection.new
     Cond.code_section_stack.push(section)
@@ -280,27 +303,56 @@ module Cond
     end
   end
 
-  def body(*args, &block)
-    Cond.code_section_stack.top.body(*args, &block)
+  #
+  # Begin the principle portion of a +restartable+ or +handling+
+  # section.
+  #
+  # +again+ may pass arguments to the block parameters of +body+.
+  #
+  def body(&block)
+    Cond.code_section_stack.top.body(&block)
   end
 
+  #
+  # Run the +body+ block again.  This is called from inside handlers
+  # and restarts.
+  #
+  # Optionally pass arguments which are given to the +body+ block.
+  #
   def again(*args)
     Cond.code_section_stack.top.again(*args)
   end
 
+  #
+  # Similar to +return+ for the current +restartable+ or +handling+
+  # section.
+  #
+  # Optionally pass arguments which will be the value returned by the
+  # +restartable+ or +handling+ block.
+  #
+  # It has the semantics of +return+.  When given multiple arguments,
+  # it returns an array.  When given one argument, it returns only
+  # that argument (not an array).
+  #
   def done(*args)
     Cond.code_section_stack.top.done(*args)
   end
 
-  def restart(*args, &block)
-    Cond.code_section_stack.top.restart(*args, &block)
+  #
+  # Define a restart while inside a +restartable+ section.
+  #
+  def restart(symbol, message = "", &block)
+    Cond.code_section_stack.top.restart(symbol, message, &block)
   end
 
-  def handle(*args, &block)
-    Cond.code_section_stack.top.send(:handle, *args, &block)
+  #
+  # Define a handler while inside a +handling+ section.
+  #
+  def handle(symbol, message = "", &block)
+    Cond.code_section_stack.top.handle(symbol, message, &block)
   end
   
-  class CodeSection
+  class CodeSection  #:nodoc:
     include LoopWith
 
     def initialize(with_functions)
@@ -339,25 +391,28 @@ module Cond
     end
   end
 
-  class RestartableSection < CodeSection
+  class RestartableSection < CodeSection  #:nodoc:
     def initialize
       super(:with_restarts)
     end
 
-    def restart(sym, message = "", &block)
+    def restart(sym, message, &block)
       @functions[sym] = Restart.new(message, &block)
     end
   end
 
-  class HandlingSection < CodeSection
+  class HandlingSection < CodeSection  #:nodoc:
     def initialize
       super(:with_handlers)
     end
 
-    def handle(sym, message = "", &block)
+    def handle(sym, message, &block)
       @functions[sym] = Handler.new(message, &block)
     end
   end
+
+  ######################################################################
+  # original raise
 
   define_method :original_raise, &method(:raise)
   module_function :original_raise

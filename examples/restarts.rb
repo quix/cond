@@ -2,6 +2,8 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 require 'cond'
 require 'pp'
 
+include Cond
+
 #
 # http://c2.com/cgi/wiki?LispRestartExample
 #
@@ -25,7 +27,7 @@ def read_new_value(what)
 end
 
 def restartable_gethash(hash, key, default = nil)
-  Cond.restartable do
+  restartable do
     body do
       hash.fetch(key) {
         raise RestartableGethashError.new(key, hash)
@@ -55,7 +57,7 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-Cond.with_default_handlers {
+with_default_handlers {
   puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
 }
 
