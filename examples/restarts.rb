@@ -6,6 +6,8 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 require 'cond'
 require 'pp'
 
+include Cond  # (optional)
+
 class RestartableGethashError < RuntimeError
   def initialize(info)
     super()
@@ -27,21 +29,21 @@ end
 
 def restartable_gethash(hash, key, default = nil)
   restarts = {
-    :continue => Cond.restart("Return not having found the value.") {
+    :continue => restart("Return not having found the value.") {
       throw :break
     },
-    :try_again => Cond.restart("Try getting the key from the hash again.") {
+    :try_again => restart("Try getting the key from the hash again.") {
       throw :next
     },
-    :use_new_key => Cond.restart("Use a new key.") { |exception|
+    :use_new_key => restart("Use a new key.") { |exception|
       key.replace read_new_value("key")
     },
-    :use_new_hash => Cond.restart("Use a new hash.") { |exception|
+    :use_new_hash => restart("Use a new hash.") { |exception|
       hash.replace read_new_value("hash")
     },
   }
 
-  Cond.with_restarts(restarts) {
+  with_restarts(restarts) {
     # 'throw :break' is like 'break', 'throw :next' is like 'next'
     loop_with(:break, :next) {
       value = hash[key]
@@ -61,14 +63,14 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-Cond.with_default_handlers {
+with_default_handlers {
   puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
 }
 
 #  
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:64
+#  restart.rb:66
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -85,7 +87,7 @@ Cond.with_default_handlers {
 #
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:64
+#  restart.rb:66
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -103,7 +105,7 @@ Cond.with_default_handlers {
 #
 #  % ruby restart.rb
 #  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:64
+#  restart.rb:66
 #  RestartableGethashError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",

@@ -1,5 +1,7 @@
 require File.dirname(__FILE__) + "/common"
 
+include Cond
+
 class DivergedError < StandardError
   attr_reader :epsilon
 
@@ -14,20 +16,18 @@ class DivergedError < StandardError
 end
 
 def calc(x, y, epsilon)
-  done, again = gensym, gensym
-
   restarts = {
     :change_epsilon => Cond.restart("Try again with new epsilon.") {
       |new_epsilon|
       epsilon = new_epsilon
-      throw again
+      throw :again
     },
     :give_up => Cond.restart("Skip this calculation.") {
-      throw done, nil
+      throw :done, nil
     },
   }
 
-  loop_with(done, again) {
+  loop_with(:done, :again) {
     Cond.with_restarts(restarts) {
       # ...
       # ... some calculation
@@ -35,7 +35,7 @@ def calc(x, y, epsilon)
       if epsilon < 0.01
         raise DivergedError.new(epsilon)
       end
-      throw done, 42
+      throw :done, 42
     }
   }
 end

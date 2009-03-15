@@ -1,13 +1,17 @@
 
-require 'cond/kernel'
+require 'cond/ext'
 require 'cond/thread_local'
 require 'cond/stack'
 require 'cond/defaults'
+require 'cond/loop_with'
 
 # 
 # Condition system for handling errors in Ruby.  See README.
 # 
 module Cond
+  include Ext
+  include LoopWith
+
   module_function
 
   #
@@ -155,7 +159,7 @@ module Cond
   # shown inside Cond#debugger.
   #
   def restart(message = "", &block)
-    Restart.new(&block).tap { |t| t.message = message }
+    Restart.new(&block).extend(Ext).tap { |t| t.message = message }
   end
 
   #
@@ -164,7 +168,7 @@ module Cond
   # shown by whatever tools that use it (currently none).
   #
   def handler(message = "", &block)
-    Handler.new(&block)
+    Handler.new(&block).extend(Ext).tap { |t| t.message = message }
   end
   
   def find_handler(target)
@@ -175,7 +179,7 @@ module Cond
         else
           acc
         end
-      }.sort_by { |t| t.first }.first.let { |t| t and t[1] }
+      }.sort_by { |t| t.first }.first.extend(Ext).let { |t| t and t[1] }
     }
   end
 
@@ -190,13 +194,14 @@ module Cond
   #   Cond.wrap_instance_method(Fixnum, :/)
   #
   def wrap_instance_method(mod, method)
-    "cond_original_#{mod.name}_#{method}_#{gensym}".to_sym.tap { |original|
+    "cond_original_#{mod.inspect}_#{method.inspect}".extend(Ext).tap {
+      |original|
       # TODO: jettison 1.8.6, remove eval and use |&block|
       mod.module_eval %{
         alias_method :'#{original}', :'#{method}'
         def #{method}(*args, &block)
           begin
-            send(:"#{original}", *args, &block)
+            send(:'#{original}', *args, &block)
           rescue Exception => e
             raise e
           end
@@ -216,13 +221,14 @@ module Cond
   #   Cond.wrap_singleton_method(IO, :read)
   #
   def wrap_singleton_method(mod, method)
-    wrap_instance_method(mod.singleton_class, method)
+    singleton_class = class << mod ; self ; end
+    wrap_instance_method(singleton_class, method)
   end
   
   class << self
     [:handlers_stack, :restarts_stack].each { |name|
       include ThreadLocal.accessor_module(name) {
-        Stack.new.tap { |t| t.push(Hash.new) }
+        Stack.new.extend(Ext).tap { |t| t.push(Hash.new) }
       }
     }
 

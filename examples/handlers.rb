@@ -1,6 +1,7 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 
 require 'cond'
+include Cond  # (optional)
 
 FredError, WilmaError, BarneyError = (1..3).map {
   Class.new RuntimeError
@@ -11,7 +12,7 @@ handlers = {
   # We are able to handle Fred errors immediately; no need to unwind
   # the stack.
   #
-  FredError => Cond.handler {
+  FredError => handler {
     # ...
     puts "Handled a FredError. Continuing..."
   },
@@ -19,7 +20,7 @@ handlers = {
   #
   # We want to be informed of Wilma errors, but we can't handle them.
   #
-  WilmaError => Cond.handler {
+  WilmaError => handler {
     puts "Got a WilmaError. Re-raising..."
     raise
   },
@@ -30,7 +31,7 @@ handlers = {
   #
   BarneyError => let {   # let { } is equivalent to lambda { }.call
     num_errors = 0
-    Cond.handler {
+    handler {
       num_errors += 1
       if num_errors < 3
         puts "Got BarneyError ##{num_errors}. Retrying..."
@@ -43,14 +44,14 @@ handlers = {
   }
 }
 
-Cond.with_handlers(handlers) {
+with_handlers(handlers) {
   raise FredError
   # => Handled a FredError. Continuing...
     
   #
   # We want to ignore Wilma errors here.
   # 
-  Cond.with_handlers(WilmaError => lambda { |*| puts "Ignored WilmaError." }) {
+  with_handlers(WilmaError => handler { puts "Ignored WilmaError." }) {
     raise WilmaError
     # => Ignored WilmaError.
     

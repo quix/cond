@@ -1,9 +1,11 @@
 
 require 'thread'
-require 'cond/kernel'
+require 'cond/generator'
 
 module Cond
   class ThreadLocal
+    include Generator
+
     #
     # The block should create a new object (if not, the returned
     # object will be shared across threads, which rather defeats the
