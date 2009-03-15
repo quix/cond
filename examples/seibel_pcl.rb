@@ -1,6 +1,30 @@
+$LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
+
 # 
 # http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 # 
+
+require 'cond'
+include Cond  # (optional)
+
+class MalformedLogEntryError < StandardError
+end
+
+def parse_log_entry(text)
+  if text =~ %r!\A\#!
+    text.split
+  else
+    raise MalformedLogEntryError 
+  end
+end
+
+def find_all_logs
+  [__FILE__]
+end
+
+def analyze_log(log)
+  parse_log_file(log)
+end
 
 #
 # (defun parse-log-file (file)
@@ -13,7 +37,7 @@
 def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
-      entry = Cond.with_handlers(MalformedLogEntryError => lambda { }) {
+      entry = with_handlers(MalformedLogEntryError => lambda { }) {
         parse_log_entry(text)
       }
       entry ? acc << entry : acc
@@ -34,7 +58,7 @@ parse_log_file(__FILE__)
 def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
-      entry = Cond.with_restarts(:skip_log_entry => lambda { }) {
+      entry = with_restarts(:skip_log_entry => lambda { }) {
         parse_log_entry(text)
       }
       entry ? acc << entry : acc
@@ -57,10 +81,10 @@ Cond.debugger {
 def log_analyzer
   handlers = {
     MalformedLogEntryError => lambda {
-      Cond.invoke_restart(:skip_log_entry)
+      invoke_restart(:skip_log_entry)
     }
   }
-  Cond.with_handlers(handlers) {
+  with_handlers(handlers) {
     find_all_logs.each { |log|
       analyze_log(log)
     }
@@ -69,27 +93,3 @@ end
 
 log_analyzer
 
-BEGIN {
-  $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
-  
-  require 'cond'
-
-  class MalformedLogEntryError < StandardError
-  end
-  
-  def parse_log_entry(text)
-    if text =~ %r!\A\#!
-      text.split
-    else
-      raise MalformedLogEntryError 
-    end
-  end
-  
-  def find_all_logs
-    [__FILE__]
-  end
-  
-  def analyze_log(log)
-    parse_log_file(log)
-  end
-}
