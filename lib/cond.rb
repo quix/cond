@@ -172,32 +172,19 @@ module Cond
     Handler.new(&block)
   end
   
-  def find_handler(exception)  # :nodoc:
-    if exception.nil?
-      nil
+  def find_handler(target)  # :nodoc:
+    handler = @handlers_stack.top[target]
+    if handler
+      handler
     else
-      handler = @handlers_stack.top[exception]
-      if handler
-        handler
-      else
-        # find the handler closest in the ancestry
-        ancestors = (
-          if exception.is_a? String
-            RuntimeError
-          elsif exception.is_a? Exception
-            exception.class
-          else
-            exception
-          end
-        ).ancestors
-        @handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
-          if index = ancestors.index(klass)
-            acc << [index, func]
-          else
-            acc
-          end
-        }.sort_by { |elem| elem.first }.first.let { |t| t and t[1] }
-      end
+      ancestors = target.ancestors
+      @handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+        if index = ancestors.index(klass)
+          acc << [index, func]
+        else
+          acc
+        end
+      }.sort_by { |e| e.first }.first.let { |t| t and t[1] }
     end
   end
 
@@ -320,36 +307,30 @@ module Kernel
     if exception_inside_handler.top
       # we are inside a handler
       if args.empty?
-        cond_original_raise(*exception_inside_handler.top)
+        cond_original_raise(exception_inside_handler.top)
       else
         cond_original_raise(*args)
       end
     else
       # not inside a handler
-      handler = Cond.find_handler(
-        if args.empty?
-          $!
-        else
-          args.first
-        end
-      )
+      begin
+        cond_original_raise(*args)
+      rescue Exception => exception
+      end
+      handler = Cond.find_handler(exception.class)
       if handler
-        # raise/rescue to generate exception.backtrace
+        exception_inside_handler.push(exception)
         begin
-          cond_original_raise(*args)
-        rescue Exception => exception
-        end
-        
-        backtrace_args = [exception, *args[1..-1]]
-        exception_inside_handler.push(backtrace_args)
-        begin
-          handler.call(*backtrace_args)
+          handler.call(exception)
         ensure
           exception_inside_handler.pop
         end
       else
-        cond_original_raise(*args)
+        cond_original_raise(exception)
       end
     end
   }
+
+  alias_method :cond_original_fail, :fail
+  alias_method :fail, :raise
 end

@@ -40,6 +40,14 @@ describe "handler system" do
     @memo.should == [DogError]
   end
 
+  it "should find a match given an Exception instance" do
+    @memo.clear
+    Cond.with_handlers(@handlers) {
+      raise DogError.new
+    }
+    @memo.should == [DogError]
+  end
+
   it "should not find non-matches" do
     lambda {
       Cond.with_handlers(BirdError => Cond.handler { }) {
@@ -66,14 +74,6 @@ describe "handler system" do
       raise SparrowError
     }
     @memo.should == [BirdError]
-  end
-
-  it "should work with 'raise \"string\"'" do
-    @memo.clear
-    Cond.with_handlers(@handlers) {
-      raise "The mass of men lead lives of quiet desperation. --Thoreau"
-    }
-    @memo.should == [RuntimeError]
   end
 
   it "should work with the catch-all handler" do

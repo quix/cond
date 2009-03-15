@@ -33,7 +33,7 @@ def calc(x, y, epsilon)
       # ... some calculation
       # ...
       if epsilon < 0.01
-        raise DivergedError, epsilon
+        raise DivergedError.new(epsilon)
       end
       throw done, 42
     }
