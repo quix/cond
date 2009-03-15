@@ -3,32 +3,33 @@ require 'thread'
 
 module Cond
   module Generator
-    module_function
+    @mutex = Mutex.new
+    @count = 0
 
-    def gensym(*args)
-      genstr(*args).to_sym
-    end
-
-    #
-    # define_method avoids module_function + instance variable problems
-    #
-    name = :genstr
-    mutex = Mutex.new
-    count = 0
-    define_method(name) { |*args|
-      mutex.synchronize {
-        count += 1
-      }
-      # TODO: jettison 1.8, use |prefix = nil|
-      case args.size
-      when 0
-        "G#{count}"
-      when 1
-        "|#{args.first}#{count}|"
-      else
-        raise ArgumentError, "wrong number of arguments (#{args.size} for 1)"
+    class << self
+      def gensym(*args)
+        genstr(*args).to_sym
       end
+
+      #
+      # define_method avoids module_function + instance variable problems
+      #
+      def genstr(prefix = nil)
+        @mutex.synchronize {
+          @count += 1
+        }
+        # TODO: jettison 1.8, use |prefix = nil|
+        if prefix
+          "|#{prefix}#{@count}|"
+        else
+          "G#{@count}"
+        end
+      end
+    end
+    
+    [:genstr, :gensym].each { |name|
+      define_method name, &method(name)
+      private name
     }
-    module_function name
   end
 end

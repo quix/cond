@@ -1,12 +1,6 @@
 
 module Cond
   module Defaults
-    include Ext
-    extend Ext
-
-    include LoopWith
-    extend LoopWith
-
     LEAVE = Generator.gensym("default leave")
     AGAIN = Generator.gensym("default again")
 
@@ -27,7 +21,7 @@ module Cond
         }
       }
       
-      index = loop_with(LEAVE) {
+      index = LoopWith.loop_with(LEAVE) {
         restarts.each_with_index { |restart, inner_index|
           message = let {
             t = restart[:func]

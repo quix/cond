@@ -15,6 +15,7 @@ module Cond
     
     def push(obj)
       @array.push(obj)
+      self
     end
 
     def pop

@@ -3,7 +3,6 @@ require 'cond/thread_local'
 require 'cond/stack'
 require 'cond/loop_with'
 require 'cond/generator'
-require 'cond/ext'
 require 'cond/defaults'
 
 # 
@@ -146,14 +145,15 @@ module Cond
   #
   def find_handler(target)
     Cond.handlers_stack.top.fetch(target) {
-      Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+      found = Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
         index = target.ancestors.index(klass)
         if index
           acc << [index, func]
         else
           acc
         end
-      }.sort_by { |t| t.first }.first.extend(Ext).let { |t| t and t[1] }
+      }.sort_by { |t| t.first }.first
+      found and found[1]
     }
   end
 
@@ -203,20 +203,19 @@ module Cond
   #   Cond.wrap_instance_method(Fixnum, :/)
   #
   def wrap_instance_method(mod, method)
-    "cond_original_#{mod.inspect}_#{method.inspect}".extend(Ext).tap {
-      |original|
-      # TODO: jettison 1.8.6, remove eval and use |&block|
-      mod.module_eval %{
-        alias_method :'#{original}', :'#{method}'
-        def #{method}(*args, &block)
-          begin
-            send(:'#{original}', *args, &block)
-          rescue Exception => e
-            raise e
-          end
+    original = "cond_original_#{mod.inspect}_#{method.inspect}"
+    # TODO: jettison 1.8.6, remove eval and use |&block|
+    mod.module_eval %{
+      alias_method :'#{original}', :'#{method}'
+      def #{method}(*args, &block)
+        begin
+          send(:'#{original}', *args, &block)
+        rescue Exception => e
+          raise e
         end
-      }
+      end
     }
+    original
   end
 
   #
@@ -247,27 +246,20 @@ module Cond
   # singleton class
 
   class << self
-    include LoopWith
-    public :loop_with
-
-    include Generator
-    public :gensym
-
-    [:handlers_stack, :restarts_stack].each { |name|
+    stack_0  = lambda { |*| Stack.new }
+    stack_1  = lambda { |*| Stack.new.push(Hash.new) }
+    defaults = lambda { |name| Defaults.send(name) }
+    {
+      :code_section_stack => stack_0,
+      :exception_stack    => stack_0,
+      :handlers_stack     => stack_1,
+      :restarts_stack     => stack_1,
+      :stream             => defaults,
+      :default_handlers   => defaults,
+      :default_restarts   => defaults,
+    }.each_pair { |name, init|
       include ThreadLocal.accessor_module(name) {
-        Stack.new.extend(Ext).tap { |t| t.push(Hash.new) }
-      }
-    }
-    
-    [:code_section_stack, :exception_stack].each { |name|
-      include ThreadLocal.accessor_module(name) {
-        Stack.new
-      }
-    }
-    
-    [:stream, :default_handlers, :default_restarts].each { |name|
-      include ThreadLocal.accessor_module(name) {
-        Defaults.send(name)
+        init.call(name)
       }
     }
   end
