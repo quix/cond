@@ -28,25 +28,23 @@ end
 
 def restartable_gethash(hash, key, default = nil)
   restartable do
-    body do
-      hash.fetch(key) {
-        raise RestartableGethashError.new(key, hash)
-      }
-    end
     restart :continue, "Return not having found the value." do
       return
     end
     restart :try_again, "Try getting the key from the hash again." do
       again
     end
-    restart :use_new_key, "Use a new key." do |exception|
+    restart :use_new_key, "Use a new key." do
       key = read_new_value("key")
       again
     end
-    restart :use_new_hash, "Use a new hash." do |exception|
+    restart :use_new_hash, "Use a new hash." do
       hash = read_new_value("hash")
       again
     end
+    hash.fetch(key) {
+      raise RestartableGethashError.new(key, hash)
+    }
   end
 end
 
@@ -57,7 +55,7 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-debugger {
+with_default_handlers {
   puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
 }
 

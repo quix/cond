@@ -24,66 +24,59 @@ handling do
     raise
   end
 
-  body do
+  raise FredError
+  # => Handled a FredError. Continuing...
+    
+  handling do
+    #
+    # We want to ignore Wilma errors here.
+    # 
+    handle WilmaError do
+      puts "Ignored WilmaError."
+    end
+    
+    raise WilmaError
+    # => Ignored WilmaError.
+      
+    # the FredError handler is still active
     raise FredError
     # => Handled a FredError. Continuing...
-    
-    handling do
-      #
-      # We want to ignore Wilma errors here.
-      # 
-      handle WilmaError do
-        puts "Ignored WilmaError."
-      end
+  end
 
-      body do
-        raise WilmaError
-        # => Ignored WilmaError.
-
-        # the FredError handler is still active
-        raise FredError
-        # => Handled a FredError. Continuing...
+  #
+  # The previous WilmaError handler has been restored.
+  #
+  begin
+    raise WilmaError, "should not be ignored"
+  rescue WilmaError => e
+    puts "Rescued: #{e.inspect}"
+  end
+  # => Got a WilmaError. Re-raising...
+  # => Rescued: #<WilmaError: should not be ignored>
+  
+  num_errors = 0
+  handling do
+    #
+    # If an error occurs during a Barney calculation, try twice
+    # more; thereafter, give up.
+    #
+    handle BarneyError do
+      num_errors += 1
+      if num_errors == 3
+        puts "Got BarneyError ##{num_errors}. Giving up..."
+        raise
+      else
+        puts "Got BarneyError ##{num_errors}. Retrying..."
+        again
       end
     end
 
-    #
-    # The previous WilmaError handler has been restored.
-    #
     begin
-      raise WilmaError, "should not be ignored"
-    rescue WilmaError => e
-      puts "Rescued: #{e.inspect}"
-    end
-    # => Got a WilmaError. Re-raising...
-    # => Rescued: #<WilmaError: should not be ignored>
-
-    handling do
-      num_errors = 0
-
-      #
-      # If an error occurs during a Barney calculation, try twice
-      # more; thereafter, give up.
-      #
-      handle BarneyError do
-        num_errors += 1
-        if num_errors == 3
-          puts "Got BarneyError ##{num_errors}. Giving up..."
-          raise
-        else
-          puts "Got BarneyError ##{num_errors}. Retrying..."
-          again
-        end
-      end
-
-      body do
-        begin
-          puts "Starting Barney calculation..."
-          # ...
-          raise BarneyError
-        rescue BarneyError
-          puts "Gave up on Barney."
-        end
-      end
+      puts "Starting Barney calculation..."
+      # ...
+      raise BarneyError
+    rescue BarneyError
+      puts "Gave up on Barney."
     end
     # => Starting Barney calculation...
     # => Got BarneyError #1. Retrying...

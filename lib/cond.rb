@@ -275,55 +275,6 @@ module Cond
   # shiny exterior
 
   #
-  # Begin a restartable section of code.
-  #
-  def restartable(&block)
-    section = RestartableSection.new
-    Cond.code_section_stack.push(section)
-    begin
-      block.call
-      section.instance_eval { run }
-    ensure
-      Cond.code_section_stack.pop
-    end
-  end
-  
-  #
-  # Begin a section of code in which exceptions may be handled without
-  # unwinding the stack.
-  #
-  def handling(&block)
-    section = HandlingSection.new
-    Cond.code_section_stack.push(section)
-    begin
-      block.call
-      section.instance_eval { run }
-    ensure
-      Cond.code_section_stack.pop
-    end
-  end
-
-  #
-  # Begin the principle portion of a +restartable+ or +handling+
-  # section.
-  #
-  # +again+ may pass arguments to the block parameters of +body+.
-  #
-  def body(&block)
-    Cond.code_section_stack.top.body(&block)
-  end
-
-  #
-  # Run the +body+ block again.  This is called from inside handlers
-  # and restarts.
-  #
-  # Optionally pass arguments which are given to the +body+ block.
-  #
-  def again(*args)
-    Cond.code_section_stack.top.again(*args)
-  end
-
-  #
   # Similar to +return+ for the current +restartable+ or +handling+
   # section.
   #
@@ -336,6 +287,16 @@ module Cond
   #
   def done(*args)
     Cond.code_section_stack.top.done(*args)
+  end
+
+  #
+  # Run the +restartable+ or +handling+ block again.  This is called
+  # from inside handlers and restarts.
+  #
+  # Optionally pass arguments which are given to the block.
+  #
+  def again(*args)
+    Cond.code_section_stack.top.again(*args)
   end
 
   #
@@ -352,22 +313,43 @@ module Cond
     Cond.code_section_stack.top.handle(symbol, message, &block)
   end
   
+  #
+  # Begin a restartable section of code.
+  #
+  def restartable(&block)
+    section = RestartableSection.new(&block)
+    Cond.code_section_stack.push(section)
+    begin
+      section.instance_eval { run }
+    ensure
+      Cond.code_section_stack.pop
+    end
+  end
+  
+  #
+  # Begin a section of code in which exceptions may be handled without
+  # unwinding the stack.
+  #
+  def handling(&block)
+    section = HandlingSection.new(&block)
+    Cond.code_section_stack.push(section)
+    begin
+      section.instance_eval { run }
+    ensure
+      Cond.code_section_stack.pop
+    end
+  end
+
   class CodeSection  #:nodoc:
     include LoopWith
 
-    def initialize(with_functions)
+    def initialize(with_functions, &block)
       @with_functions = with_functions
-      @functions = Hash.new
+      @block = block
       @done, @again = (1..2).map { Generator.gensym }
-      @body_args = []
     end
 
-    def body(&block)
-      @body = block
-    end
-    
     def again(*args)
-      @body_args = args
       throw @again
     end
 
@@ -384,30 +366,30 @@ module Cond
 
     def run
       loop_with(@done, @again) {
-        Cond.send(@with_functions, @functions) {
-          throw @done, @body.call(*@body_args)
+        Cond.send(@with_functions, Hash.new) {
+          throw @done, @block.call
         }
       }
     end
   end
 
   class RestartableSection < CodeSection  #:nodoc:
-    def initialize
-      super(:with_restarts)
+    def initialize(&block)
+      super(:with_restarts, &block)
     end
 
     def restart(sym, message, &block)
-      @functions[sym] = Restart.new(message, &block)
+      Cond.restarts_stack.top[sym] = Restart.new(message, &block)
     end
   end
 
   class HandlingSection < CodeSection  #:nodoc:
-    def initialize
-      super(:with_handlers)
+    def initialize(&block)
+      super(:with_handlers, &block)
     end
 
     def handle(sym, message, &block)
-      @functions[sym] = Handler.new(message, &block)
+      Cond.handlers_stack.top[sym] = Handler.new(message, &block)
     end
   end
 

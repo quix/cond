@@ -46,27 +46,23 @@ describe Cond do
 
       f = lambda {
         restartable do
-          body do
-            memo.push :f
-            memo.push :raise
-            raise ExampleError
-          end
           restart :example_restart do |*args|
             memo.push :restart
             memo.push args
           end
+          memo.push :f
+          memo.push :raise
+          raise ExampleError
         end
       }
     
       memo.push :first
       handling do
-        body do
-          f.call
-        end
         handle ExampleError do
           memo.push :handler
           invoke_restart :example_restart, :x, :y
         end
+        f.call
       end
       memo.push :last
 

@@ -12,26 +12,22 @@ Handle exceptions without unwinding the stack.
   
   def divide(x, y)
     restartable do
-      body do
-        raise ZeroDivisionError if y == 0
-        x/y
-      end
       restart :return_this_instead do |value|
         return value
       end
+      raise ZeroDivisionError if y == 0
+      x/y
     end
   end
   
   handling do
-    body do
-      puts divide(10, 2)  # => 5
-      puts divide(18, 3)  # => 6
-      puts divide(4, 0)   # => 42
-      puts divide(7, 0)   # => 42
-    end
     handle ZeroDivisionError do |exception|
       invoke_restart :return_this_instead, 42
     end
+    puts divide(10, 2)  # => 5
+    puts divide(18, 3)  # => 6
+    puts divide(4, 0)   # => 42
+    puts divide(7, 0)   # => 42
   end
 
 == Other Examples
