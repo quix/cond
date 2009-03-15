@@ -9,27 +9,28 @@ Lisp condition system.
 == Synopsis
   
   require 'cond'
+  include Cond  # (optional)
 
   def divide(x, y)
     restarts = {
-      :return_this_instead => Cond.restart { |value|
+      :return_this_instead => restart { |value|
         return value
       }
     }
     
-    Cond.with_restarts(restarts) {
+    with_restarts(restarts) {
       raise ZeroDivisionError if y == 0
       x/y
     }
   end
   
   handlers = {
-    ZeroDivisionError => Cond.handler {
-      Cond.invoke_restart(:return_this_instead, 42)
+    ZeroDivisionError => handler {
+      invoke_restart(:return_this_instead, 42)
     }
   }
   
-  Cond.with_handlers(handlers) {
+  with_handlers(handlers) {
     puts divide(10, 2)  # => 5
     puts divide(18, 3)  # => 6
     puts divide(4, 0)   # => 42

@@ -12,7 +12,7 @@ class RestartableGethashError < RuntimeError
     @key, @hash = info
   end
 
-  def report
+  def message
     sprintf(
       "%s error getting %s from:\n%s",
       self, @key.inspect, @hash.pretty_inspect

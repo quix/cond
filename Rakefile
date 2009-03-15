@@ -47,6 +47,25 @@ Rake::GemPackageTask.new(GEMSPEC) { |t|
 }
 
 ######################################################################
+# utils
+
+task :pull_utils do
+  %w[kernel stack thread_local].each { |stem|
+    basename = stem + ".rb"
+    source = "../quix/lib/quix/" + basename
+    dest = "lib/cond/" + basename
+    contents = (
+      File.read(source).
+      gsub("Quix", "Cond").
+      gsub("quix", "cond")
+    )
+    File.open(dest, "w") { |out|
+      out.print contents
+    }
+  }
+end
+
+######################################################################
 # doc
 
 task :doc => :clean_doc do 

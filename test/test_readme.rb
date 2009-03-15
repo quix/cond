@@ -1,15 +1,19 @@
 require File.dirname(__FILE__) + "/common"
 
-file = Pathname(__FILE__).dirname + ".." + "README"
+require 'quix/ruby'
+
+here = Pathname(__FILE__).dirname
+file = here + ".." + "README"
+lib = (here + ".." + "lib").expand_path
 
 describe file do
   it "should run as claimed" do
     contents = file.read
     expected = contents.scan(%r!\# => (.*?)\n!).flatten.join("\n")
-    code = contents.match(%r!^== Synopsis.*?\n(.*?)^==!m)[1]
-    stdout, stderr = capture_io {
-      eval(code)
-    }
-    [stdout.chomp, stderr].should == [expected, ""]
+    code = (
+      "$LOAD_PATH.unshift '#{lib}'\n" +
+      contents.match(%r!^== Synopsis.*?\n(.*?)^==!m)[1]
+    )
+    pipe_to_ruby(code).chomp.should == expected
   end
 end

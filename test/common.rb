@@ -13,20 +13,11 @@ rescue LoadError
   require 'spec'
 end
 
-# from zentest_assertions.rb by Ryan Davis
-def capture_io
-  require 'stringio'
-  orig_stdout = $stdout.dup
-  orig_stderr = $stderr.dup
-  captured_stdout = StringIO.new
-  captured_stderr = StringIO.new
-  $stdout = captured_stdout
-  $stderr = captured_stderr
-  yield
-  captured_stdout.rewind
-  captured_stderr.rewind
-  return captured_stdout.string, captured_stderr.string
-ensure
-  $stdout = orig_stdout
-  $stderr = orig_stderr
+def pipe_to_ruby(code)
+  require 'quix/ruby'
+  IO.popen(%{"#{Quix::Ruby::EXECUTABLE}"}, "r+") { |pipe|
+    pipe.puts code
+    pipe.close_write
+    pipe.read
+  }
 end

@@ -8,26 +8,26 @@ class DivergedError < StandardError
     @epsilon = epsilon
   end
 
-  def report
+  def message
     "Failed to converge with epsilon #{@epsilon}"
   end
 end
 
 def calc(x, y, epsilon)
-  done, try_again = gensym, gensym
+  done, again = gensym, gensym
 
   restarts = {
     :change_epsilon => Cond.restart("Try again with new epsilon.") {
       |new_epsilon|
       epsilon = new_epsilon
-      throw try_again
+      throw again
     },
     :give_up => Cond.restart("Skip this calculation.") {
       throw done, nil
     },
   }
 
-  loop_with(done, try_again) {
+  loop_with(done, again) {
     Cond.with_restarts(restarts) {
       # ...
       # ... some calculation

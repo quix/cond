@@ -1,18 +1,13 @@
 
 require 'cond/kernel'
-require 'cond/thread_local_stack'
+require 'cond/thread_local'
+require 'cond/stack'
+require 'cond/defaults'
 
 # 
 # Condition system for handling errors in Ruby.  See README.
 # 
 module Cond
-  @handlers_stack, @restarts_stack = (1..2).map {
-    ThreadLocalStack.new.tap { |t| t.push(Hash.new) }
-  }
-
-  # for default handlers and default restarts
-  @stream = ThreadLocal.new { STDERR }
-
   module_function
 
   #
@@ -48,11 +43,11 @@ module Cond
   #   }
   #
   def with_handlers(handlers)
-    @handlers_stack.push(@handlers_stack.top.merge(handlers))
+    Cond.handlers_stack.push(Cond.handlers_stack.top.merge(handlers))
     begin
       yield
     ensure
-      @handlers_stack.pop
+      Cond.handlers_stack.pop
     end
   end
   
@@ -70,11 +65,11 @@ module Cond
   #   }
   #
   def with_restarts(restarts)
-    @restarts_stack.push(@restarts_stack.top.merge(restarts))
+    Cond.restarts_stack.push(Cond.restarts_stack.top.merge(restarts))
     begin
       yield
     ensure
-      @restarts_stack.pop
+      Cond.restarts_stack.pop
     end
   end
     
@@ -83,7 +78,7 @@ module Cond
   # an exception is raised.
   #
   def with_default_handlers
-    with_handlers(default_handlers) {
+    with_handlers(Cond.default_handlers) {
       yield
     }
   end
@@ -92,7 +87,7 @@ module Cond
   # Some some default restarts are provided.
   #
   def with_default_restarts
-    with_restarts(default_restarts) {
+    with_restarts(Cond.default_restarts) {
       yield
     }
   end
@@ -122,7 +117,7 @@ module Cond
   # The current set of restarts which have been registered.
   #
   def available_restarts
-    @restarts_stack.top
+    Cond.restarts_stack.top
   end
     
   #
@@ -143,7 +138,7 @@ module Cond
   # Restart: an outlet to allow callers to hook into your code.
   #
   class Restart < Proc
-    attr_accessor :report
+    attr_accessor :message
   end
 
   #
@@ -151,7 +146,7 @@ module Cond
   # restarts from here.
   #
   class Handler < Proc
-    attr_accessor :report
+    attr_accessor :message
   end
 
   #
@@ -159,8 +154,8 @@ module Cond
   # or Procs to with_restarts, but you'll miss the description string
   # shown inside Cond#debugger.
   #
-  def restart(report = "", &block)
-    Restart.new(&block).tap { |t| t.report = report }
+  def restart(message = "", &block)
+    Restart.new(&block).tap { |t| t.message = message }
   end
 
   #
@@ -168,13 +163,13 @@ module Cond
   # or Procs to with_handlers, but you'll miss the description string
   # shown by whatever tools that use it (currently none).
   #
-  def handler(report = "", &block)
+  def handler(message = "", &block)
     Handler.new(&block)
   end
   
   def find_handler(target)
-    @handlers_stack.top.fetch(target) {
-      @handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+    Cond.handlers_stack.top.fetch(target) {
+      Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
         if index = target.ancestors.index(klass)
           acc << [index, func]
         else
@@ -196,9 +191,9 @@ module Cond
   #
   def wrap_instance_method(mod, method)
     "cond_original_#{mod.name}_#{method}_#{gensym}".to_sym.tap { |original|
-      # use eval since 1.8.6 cannot handle |&block|
+      # TODO: jettison 1.8.6, remove eval and use |&block|
       mod.module_eval %{
-        alias_method :"#{original}", :"#{method}"
+        alias_method :'#{original}', :'#{method}'
         def #{method}(*args, &block)
           begin
             send(:"#{original}", *args, &block)
@@ -223,82 +218,26 @@ module Cond
   def wrap_singleton_method(mod, method)
     wrap_instance_method(mod.singleton_class, method)
   end
-
-  def default_handlers     ; @default_handlers.value     end
-  def default_restarts     ; @default_restarts.value     end
-  def stream               ; @stream.value               end
-
-  def default_handlers=(t) ; @default_handlers.value = t end
-  def default_restarts=(t) ; @default_restarts.value = t end
-  def stream=(t)           ; @stream.value = t           end
-
-  default_handler = lambda { |*args|
-    exception = args.first
-    stream.puts exception.inspect
-    stream.puts exception.backtrace.last
-    if exception.respond_to? :report
-      stream.puts(exception.report)
-      stream.puts
-    end
-    
-    restarts = available_restarts.keys.map { |t| t.to_s }.sort.map { |name|
-      {
-        :name => name,
-        :func => available_restarts[name.to_sym],
+  
+  class << self
+    [:handlers_stack, :restarts_stack].each { |name|
+      include ThreadLocal.accessor_module(name) {
+        Stack.new.tap { |t| t.push(Hash.new) }
       }
     }
-    
-    index = loop_with(:done, :again) {
-      restarts.each_with_index { |restart, inner_index|
-        report = let {
-          t = restart[:func]
-          if t.respond_to?(:report) and t.report != ""
-            t.report + " "
-          else
-            ""
-          end
-        }
-        stream.printf(
-          "%3d: %s(:%s)\n",
-          inner_index, report, restart[:name]
-        )
+
+    [:stream, :default_handlers, :default_restarts].each { |name|
+      include ThreadLocal.accessor_module(name) {
+        Defaults.send(name)
       }
-      stream.print "> "
-      stream.flush
-      input = STDIN.readline.strip
-      if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
-        throw :done, input.to_i
-      end
     }
-    restarts[index][:func].call(exception)
-  }
-
-  @default_handlers = ThreadLocal.new {
-    {
-      Exception => default_handler
-    }
-  }
-
-  @default_restarts = ThreadLocal.new {
-    {
-      :raise => restart("Raise this exception.") { |exception|
-        raise
-      },
-      :eval => restart("Run some code.") {
-        stream.print("Enter code: ")
-        eval(STDIN.readline.strip)
-      },
-      :backtrace => restart("Show backtrace.") { |exception|
-        stream.puts exception.backtrace
-      },
-    }
-  }
+  end
 end
 
 module Kernel
   alias_method :cond_original_raise, :raise
 
-  exception_inside_handler = Cond::ThreadLocalStack.new
+  exception_inside_handler = Cond::ThreadLocal.wrap_new(Cond::Stack)
 
   define_method(:raise) { |*args|
     if exception_inside_handler.top

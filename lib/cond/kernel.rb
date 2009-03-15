@@ -26,6 +26,38 @@ module Kernel
 
   private
 
+  unless instance_method_defined? :loop_with
+    def loop_with(done = nil, again = nil)
+      if done
+        if again
+          catch(done) {
+            while true
+              catch(again) {
+                yield
+              }
+            end
+          }
+        else
+          catch(done) {
+            while true
+              yield
+            end
+          }
+        end
+      elsif again
+        while true
+          catch(again) {
+            yield
+          }
+        end
+      else
+        while true
+          yield
+        end
+      end
+    end
+  end
+
   let {
     name = :gensym
     unless instance_method_defined? name
@@ -47,16 +79,4 @@ module Kernel
       private name
     end
   }
-
-  unless instance_method_defined? :loop_with
-    def loop_with(done = gensym, again = gensym)
-      catch(done) {
-        while true
-          catch(again) {
-            yield(done, again)
-          }
-        end
-      }
-    end
-  end
 end
