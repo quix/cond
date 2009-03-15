@@ -4,7 +4,7 @@ describe "singleton method defined in C" do
   before :all do
     @memo = []
     @handlers = {
-      ArgumentError => Cond.handler {
+      ArgumentError => lambda { |e|
         @memo.push :handled
       }
     }
@@ -47,7 +47,7 @@ describe "instance method defined in C" do
   before :all do
     @memo = []
     @handlers = {
-      ZeroDivisionError => Cond.handler {
+      ZeroDivisionError => lambda { |e|
         @memo.push :handled
       }
     }

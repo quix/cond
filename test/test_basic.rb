@@ -3,20 +3,22 @@ require File.dirname(__FILE__) + "/common"
 class ExampleError < RuntimeError
 end
 
+include Cond
+
 describe Cond do
   describe "basic handler/restart functionality" do
     it "should work using the raw form" do
       memo = []
     
       handlers = {
-        ExampleError => Cond.handler {
+        ExampleError => lambda { |exception|
           memo.push :handler
-          Cond.invoke_restart(:example_restart, :x, :y)
+          invoke_restart(:example_restart, :x, :y)
         }
       }
       
       restarts = {
-        :example_restart => Cond.restart { |*args|
+        :example_restart => lambda { |*args|
           memo.push :restart
           memo.push args
         }
@@ -24,14 +26,14 @@ describe Cond do
       
       f = lambda {
         memo.push :f
-        Cond.with_restarts(restarts) {
+        with_restarts(restarts) {
           memo.push :raise
           raise ExampleError
         }
       }
     
       memo.push :first
-      Cond.with_handlers(handlers) {
+      with_handlers(handlers) {
         f.call
       }
       memo.push :last
@@ -43,7 +45,7 @@ describe Cond do
       memo = []
 
       f = lambda {
-        Cond.restartable do
+        restartable do
           body do
             memo.push :f
             memo.push :raise
@@ -57,7 +59,7 @@ describe Cond do
       }
     
       memo.push :first
-      Cond.handling do
+      handling do
         body do
           f.call
         end
@@ -74,7 +76,7 @@ describe Cond do
 
   it "should raise NoRestartError when restart is not found" do
     lambda {
-      Cond.invoke_restart(:zzz)
+      invoke_restart(:zzz)
     }.should raise_error(Cond::NoRestartError)
   end
 end

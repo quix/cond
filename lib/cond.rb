@@ -35,7 +35,7 @@ module Cond
   #     # We are able to handle Fred errors immediately; no need to unwind
   #     # the stack.
   #     #
-  #     FredError => Cond.handler {
+  #     FredError => lambda { |exception|
   #       # ...
   #       puts "Handled a FredError. Continuing..."
   #     },
@@ -43,7 +43,7 @@ module Cond
   #     #
   #     # We want to be informed of Wilma errors, but we can't handle them.
   #     #
-  #     WilmaError => Cond.handler {
+  #     WilmaError => lambda { |exception|
   #       puts "Got a WilmaError. Re-raising..."
   #       raise
   #     },
@@ -71,7 +71,7 @@ module Cond
   #
   # Example:
   #
-  #   Cond.with_restarts(:return_nil => Cond.restart { return nil }) {
+  #   Cond.with_restarts(:return_nil => lambda { return nil }) {
   #     # ..
   #   }
   #
@@ -150,29 +150,29 @@ module Cond
     }.call(*args, &block)
   end
 
-  #
-  # Define a handler.  This is optional: you could just pass lambdas
-  # or Procs to with_handlers, but you'll miss the description string
-  # shown by whatever tools that use it (currently none).
-  #
-  def handler(message = "", &block)
-    # this particular contortion is to avoid a jruby bug
-    Proc.new(&block).extend(Ext).tap { |func|
-      func.singleton_class.module_eval {
-        define_method(:message) {
-          message
-        }
-      }
-    }
+  class MessageProc < Proc
+    def initialize(message = "", &block)
+      @message = message
+    end
+
+    def message
+      @message
+    end
   end
-  
+
   #
-  # Define a restart.  This is optional: you could just pass lambdas
-  # or Procs to with_restarts, but you'll miss the description string
-  # shown inside Cond#debugger.
+  # A restart.  Use of this is optional: you could just pass lambdas
+  # to with_restarts, but you'll miss the description string shown
+  # inside Cond#debugger.
   #
-  alias_method :restart, :handler
-  module_function :restart
+  Restart = MessageProc
+
+  #
+  # A handler.  Use of this is optional: you could just pass lambdas
+  # to with_handlers, but you'll miss the description string shown by
+  # whatever tools which use it (currently none).
+  #
+  Handler = MessageProc
 
   def find_handler(target)
     Cond.handlers_stack.top.fetch(target) {
@@ -232,7 +232,10 @@ module Cond
   # singleton class
 
   class << self
-    [:handlers_stack, :restarts_stack].each { |name|
+    include LoopWith
+    public :loop_with
+
+    [:handlers_stack, :restarts_stack, :code_section_stack].each { |name|
       include ThreadLocal.accessor_module(name) {
         Stack.new.extend(Ext).tap { |t| t.push(Hash.new) }
       }
@@ -250,52 +253,80 @@ module Cond
 
   def restartable(&block)
     section = RestartableSection.new
-    section.instance_eval(&block)
-    section.instance_eval { __run__ }
+    Cond.code_section_stack.push(section)
+    begin
+      block.call
+      section.instance_eval { run }
+    ensure
+      Cond.code_section_stack.pop
+    end
   end
   
   def handling(&block)
     section = HandlingSection.new
-    section.instance_eval(&block)
-    section.instance_eval { __run__ }
+    Cond.code_section_stack.push(section)
+    begin
+      block.call
+      section.instance_eval { run }
+    ensure
+      Cond.code_section_stack.pop
+    end
   end
 
+  def body(*args, &block)
+    Cond.code_section_stack.top.body(*args, &block)
+  end
+
+  def again(*args)
+    Cond.code_section_stack.top.again(*args)
+  end
+
+  def done(*args)
+    Cond.code_section_stack.top.done(*args)
+  end
+
+  def restart(*args, &block)
+    Cond.code_section_stack.top.restart(*args, &block)
+  end
+
+  def handle(*args, &block)
+    Cond.code_section_stack.top.send(:handle, *args, &block)
+  end
+  
   class CodeSection
     include LoopWith
 
-    private
-
     def initialize(with_functions)
-      @__with_functions = with_functions
-      @__functions = Hash.new
-      @__done, @__again = (1..2).map { Generator.gensym }
-      @__body_args = []
+      @with_functions = with_functions
+      @functions = Hash.new
+      @done, @again = (1..2).map { Generator.gensym }
+      @body_args = []
     end
 
     def body(&block)
-      @__body = block
+      @body = block
     end
     
     def again(*args)
-      @__body_args = args
-      throw @__again
+      @body_args = args
+      throw @again
     end
 
     def done(*args)
       case args.size
       when 0
-        throw @__done
+        throw @done
       when 1
-        throw @__done, args.first
+        throw @done, args.first
       else
-        throw @__done, args
+        throw @done, args
       end
     end
 
-    def __run__
-      loop_with(@__done, @__again) {
-        Cond.send(@__with_functions, @__functions) {
-          throw @__done, @__body.call(*@__body_args)
+    def run
+      loop_with(@done, @again) {
+        Cond.send(@with_functions, @functions) {
+          throw @done, @body.call(*@body_args)
         }
       }
     end
@@ -307,7 +338,7 @@ module Cond
     end
 
     def restart(sym, message = "", &block)
-      @__functions[sym] = Cond.restart(message, &block)
+      @functions[sym] = Restart.new(message, &block)
     end
   end
 
@@ -317,11 +348,7 @@ module Cond
     end
 
     def handle(sym, message = "", &block)
-      @__functions[sym] = Cond.handler(message, &block)
-    end
-
-    def invoke_restart(name, *args, &block)
-      Cond.invoke_restart(name, *args, &block)
+      @functions[sym] = Handler.new(message, &block)
     end
   end
 end

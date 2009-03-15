@@ -1,7 +1,5 @@
 require File.dirname(__FILE__) + "/common"
 
-include Cond
-
 class DivergedError < StandardError
   attr_reader :epsilon
 
@@ -17,17 +15,16 @@ end
 
 def calc(x, y, epsilon)
   restarts = {
-    :change_epsilon => Cond.restart("Try again with new epsilon.") {
-      |new_epsilon|
+    :change_epsilon => lambda { |new_epsilon|
       epsilon = new_epsilon
       throw :again
     },
-    :give_up => Cond.restart("Skip this calculation.") {
+    :give_up => lambda {
       throw :done, nil
     },
   }
 
-  loop_with(:done, :again) {
+  Cond.loop_with(:done, :again) {
     Cond.with_restarts(restarts) {
       # ...
       # ... some calculation
@@ -49,7 +46,7 @@ describe "A calculation which can raise a divergent error," do
       epsilon = 0.0005
 
       handlers = {
-        DivergedError => Cond.handler {
+        DivergedError => lambda { |e|
           epsilon += 0.001
           @memo.push :increase
           Cond.invoke_restart(:change_epsilon, epsilon)
@@ -78,7 +75,7 @@ describe "A calculation which can raise a divergent error," do
       epsilon = 1e-10
 
       handlers = {
-        DivergedError => Cond.handler {
+        DivergedError => lambda { |e|
           @memo.push :give_up
           Cond.invoke_restart(:give_up)
         }
@@ -98,4 +95,3 @@ describe "A calculation which can raise a divergent error," do
     end
   end
 end
-

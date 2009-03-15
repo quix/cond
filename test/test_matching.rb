@@ -20,7 +20,7 @@ describe "handler system" do
   before :all do
     @memo = []
     @handlers = RANDOM_ERRORS.inject(Hash.new) { |acc, ex|
-      acc.merge!(ex => Cond.handler { @memo.push ex })
+      acc.merge!(ex => lambda { |t| @memo.push ex })
     }
   end
 
@@ -50,7 +50,7 @@ describe "handler system" do
 
   it "should not find non-matches" do
     lambda {
-      Cond.with_handlers(BirdError => Cond.handler { }) {
+      Cond.with_handlers(BirdError => lambda { |e| }) {
         raise DogError
       }
     }.should raise_error(DogError)
