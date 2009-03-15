@@ -240,7 +240,13 @@ module Cond
         Stack.new.extend(Ext).tap { |t| t.push(Hash.new) }
       }
     }
-
+    
+    [:code_section_stack, :exception_stack].each { |name|
+      include ThreadLocal.accessor_module(name) {
+        Stack.new
+      }
+    }
+    
     [:stream, :default_handlers, :default_restarts].each { |name|
       include ThreadLocal.accessor_module(name) {
         Defaults.send(name)
@@ -351,41 +357,40 @@ module Cond
       @functions[sym] = Handler.new(message, &block)
     end
   end
+
+  define_method :original_raise, &method(:raise)
+  module_function :original_raise
 end
 
 module Kernel
-  alias_method :cond_original_raise, :raise
-
-  exception_inside_handler = Cond::ThreadLocal.wrap_new(Cond::Stack)
-
-  define_method(:raise) { |*args|
-    if exception_inside_handler.top
+  remove_method :raise
+  def raise(*args)
+    if Cond.exception_stack.top
       # we are inside a handler
       if args.empty?
-        cond_original_raise(exception_inside_handler.top)
+        Cond.original_raise(Cond.exception_stack.top)
       else
-        cond_original_raise(*args)
+        Cond.original_raise(*args)
       end
     else
       # not inside a handler
       begin
-        cond_original_raise(*args)
+        Cond.original_raise(*args)
       rescue Exception => exception
       end
       handler = Cond.find_handler(exception.class)
       if handler
-        exception_inside_handler.push(exception)
+        Cond.exception_stack.push(exception)
         begin
           handler.call(exception)
         ensure
-          exception_inside_handler.pop
+          Cond.exception_stack.pop
         end
       else
-        cond_original_raise(exception)
+        Cond.original_raise(exception)
       end
     end
-  }
-
-  alias_method :cond_original_fail, :fail
+  end
+  remove_method :fail
   alias_method :fail, :raise
 end
