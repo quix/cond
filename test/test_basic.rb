@@ -1,7 +1,7 @@
 require File.dirname(__FILE__) + "/common"
 
-describe "basic handler/restart functionality" do
-  it "should work" do
+describe Cond do
+  it "should do basic handler/restart functionality" do
     class ExampleError < RuntimeError
     end
     
@@ -36,5 +36,11 @@ describe "basic handler/restart functionality" do
     memo.push :last
 
     memo.should == [:first, :f, :raise, :handler, :restart, [:x, :y], :last]
+  end
+
+  it "should raise NoRestartError when restart is not found" do
+    lambda {
+      Cond.invoke_restart(:zzz)
+    }.should raise_error(Cond::NoRestartError)
   end
 end

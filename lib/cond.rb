@@ -12,6 +12,27 @@ module Cond
   include Ext
   include LoopWith
 
+  #
+  # Restart: an outlet to allow callers to hook into your code.
+  #
+  class Restart < Proc
+    attr_accessor :message
+  end
+
+  #
+  # Handler: a function called when an exception is raised; invoke
+  # restarts from here.
+  #
+  class Handler < Proc
+    attr_accessor :message
+  end
+
+  #
+  # Cond.invoke_restart was called with an unknown restart.
+  #
+  class NoRestartError < StandardError
+  end
+
   module_function
 
   #
@@ -135,22 +156,12 @@ module Cond
   # Call a restart; optionally pass it some arguments.
   #
   def invoke_restart(name, *args)
-    find_restart(name).call(*args)
-  end
-
-  #
-  # Restart: an outlet to allow callers to hook into your code.
-  #
-  class Restart < Proc
-    attr_accessor :message
-  end
-
-  #
-  # Handler: a function called when an exception is raised; invoke
-  # restarts from here.
-  #
-  class Handler < Proc
-    attr_accessor :message
+    available_restarts.fetch(name) {
+      raise(
+        NoRestartError,
+        "Did not find `#{name.inspect}' in available restarts."
+      )
+    }.call(*args)
   end
 
   #
