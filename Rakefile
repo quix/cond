@@ -1,4 +1,3 @@
-$LOAD_PATH.unshift "contrib/quix/lib"
 
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
@@ -14,7 +13,7 @@ PROJECT_NAME = "cond"
 GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
 
-DOC_DIR = "html"
+DOC_DIR = "documentation"
 
 ######################################################################
 # default
@@ -36,9 +35,6 @@ end
 
 task :test do
   require 'test/all'
-  Dir["test/test_*.rb"].each { |file|
-    require file
-  }
 end
 
 ######################################################################
@@ -65,6 +61,8 @@ task :doc => :clean_doc do
   RDoc::RDoc.new.document(files + options)
 end
 
+task :rdoc => :doc
+
 ######################################################################
 # git
 
@@ -77,7 +75,7 @@ end
 # publisher
 
 task :publish => :doc do
-  Rake::RubyForgePublisher.new(GEMSPEC.name, 'quix').upload
+  Rake::RubyForgePublisher.new(GEMSPEC.name, 'cond').upload
 end
 
 ######################################################################
