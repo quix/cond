@@ -57,7 +57,7 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-with_default_handlers {
+debugger {
   puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
 }
 

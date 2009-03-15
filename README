@@ -3,8 +3,7 @@
 
 == Description
 
-Condition system for handling errors in Ruby, modeled after the Common
-Lisp condition system.
+Handle exceptions without unwinding the stack.
 
 == Synopsis
 
@@ -51,16 +50,17 @@ or manually,
 
 == Overview
 
-The condition system implemented by +Cond+ allows errors to be handled
-near the place where they occur, _before_ the stack unwinds.
++Cond+ allows errors to be handled near the place where they occur,
+_before_ the stack unwinds.  It steals from the Common Lisp condition
+system.
 
 The system is divided into two parts: _restarts_ and _handlers_.
 Restarts are like open outlets which dwell near code that could raise
 an exception.  Handlers are like wires connecting upper-level code
 (higher in the stack) to these outlets.
 
-When an exception is raised and there is a registered handler for the
-exception, the normal raise mechanism of unwinding the stack is
+When +raise+ is called and there is a registered handler for the
+exception given, the normal raise mechanism of unwinding the stack is
 suspended while the handler is called instead.  At this time, the
 handler may invoke one of the available restarts.
 
@@ -95,16 +95,9 @@ handler may invoke one of the available restarts.
 
 A handler may find a way to negate the problem and, by plugging into a
 restart, allow execution to continue as normal from the point where
-the exception was raised.  Or a handler may choose to allow the
-exception to be raised as normal, as if the handler was never called.
-
-+Cond+ is modeled after the Common Lisp condition system, explained in
-Peter Seibel's "Practical Common Lisp":
-
-http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
-
-A few examples given there have been translated to Ruby in
-examples/seibel_pcl.rb.
++raise+ was called.  Or a handler may choose to allow the exception to
+propagate in the usual unwinding fashion, as if the handler was never
+called.
 
 == Technical Notes
 
@@ -115,18 +108,17 @@ operations are thread-safe to the degree that client code is
 thread-safe.
 
 It is not required to <tt>include Cond</tt>.  The methods of +Cond+
-are <tt>module_function</tt>s and are thus callable by <tt>Cond.handling</tt>
-etc.
+are <tt>module_function</tt>s and are thus callable with
+<tt>Cond.handling</tt> etc.
 
-+Cond+ does not modify any of the standard classes except for the
-necessary redefinition of +raise+ and intentional uses of method
-wrapping as described in the previous section.
+Except for the (backward-compatible) redefinition of +Kernel#raise+,
++Cond+ does not modify any of the standard classes.
 
 === Implementation
 
 The implementation is small and simple: it essentially consists of two
 per-thread stacks of hashes (handlers and restarts) and a redefinition
-of <tt>Kernel#raise</tt>.
+of +raise+.
 
 The shiny syntax shown in the synopsis is a thin layer concealing the
 underlying hashes.  The code blocks are rearranged into something like
@@ -184,6 +176,16 @@ Once this has been called, the line
   raise ZeroDivisionError if y == 0
 
 is unnecessary.
+
+=== Inspiration
+
+The Common Lisp condition system is explained in Peter Seibel's
+"Practical Common Lisp":
+
+http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
+
+A few examples given there have been translated to Ruby in
+examples/seibel_pcl.rb.
 
 == Links
 

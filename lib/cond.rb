@@ -100,7 +100,7 @@ module Cond
   #
   def debugger
     restarts = {
-      :leave_debugger => restart("Leave debugger") {
+      :leave_debugger => Restart.new("Leave debugger") {
         throw :leave_debugger
       }
     }

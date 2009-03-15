@@ -60,15 +60,17 @@ module Cond
 
     def default_restarts
       {
-        :raise => Cond.restart("Raise this exception.") {
+        :raise => Cond::Restart.new("Raise this exception.") {
           raise
         },
-        :eval => Cond.restart("Run some code.") {
+        :eval => Cond::Restart.new("Run some code.") {
           Cond.stream.print("Enter code: ")
           eval(STDIN.readline.strip)
+          throw AGAIN
         },
-        :backtrace => Cond.restart("Show backtrace.") { |exception|
+        :backtrace => Cond::Restart.new("Show backtrace.") { |exception|
           Cond.stream.puts exception.backtrace
+          throw AGAIN
         },
       }
     end
