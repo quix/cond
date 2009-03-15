@@ -180,25 +180,23 @@ module Cond
       if handler
         handler
       else
-        # find a superclass handler
-        catch(:found) {
-          ancestors = (
-            if exception.is_a? String
-              RuntimeError
-            elsif exception.is_a? Exception
-              exception.class
-            else
-              exception
-            end
-          ).ancestors
-          @handlers_stack.top.each { |klass, inner_handler|
-            if ancestors.include?(klass)
-              throw :found, inner_handler
-            end
-          }
-          # not found
-          nil
-        }
+        # find the handler closest in the ancestry
+        ancestors = (
+          if exception.is_a? String
+            RuntimeError
+          elsif exception.is_a? Exception
+            exception.class
+          else
+            exception
+          end
+        ).ancestors
+        @handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+          if index = ancestors.index(klass)
+            acc << [index, func]
+          else
+            acc
+          end
+        }.sort_by { |elem| elem.first }.first.let { |t| t and t[1] }
       end
     end
   end
