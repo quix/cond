@@ -7,34 +7,32 @@ Condition system for handling errors in Ruby, modeled after the Common
 Lisp condition system.
 
 == Synopsis
-  
-  require 'cond'
 
+  require 'cond'
+  
   def divide(x, y)
-    restarts = {
-      :return_this_instead => Cond.restart { |value|
+    Cond.restartable do
+      body do
+        raise ZeroDivisionError if y == 0
+        x/y
+      end
+      restart :return_this_instead do |value|
         return value
-      }
-    }
-    
-    Cond.with_restarts(restarts) {
-      raise ZeroDivisionError if y == 0
-      x/y
-    }
+      end
+    end
   end
   
-  handlers = {
-    ZeroDivisionError => Cond.handler {
-      Cond.invoke_restart(:return_this_instead, 42)
-    }
-  }
-  
-  Cond.with_handlers(handlers) {
-    puts divide(10, 2)  # => 5
-    puts divide(18, 3)  # => 6
-    puts divide(4, 0)   # => 42
-    puts divide(7, 0)   # => 42
-  }
+  Cond.handling do
+    body do
+      puts divide(10, 2)  # => 5
+      puts divide(18, 3)  # => 6
+      puts divide(4, 0)   # => 42
+      puts divide(7, 0)   # => 42
+    end
+    handle ZeroDivisionError do
+      invoke_restart(:return_this_instead, 42)
+    end
+  end
 
 == Other Examples
 

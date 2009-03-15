@@ -1,9 +1,6 @@
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../support"
 
-require 'cond'
-require 'pathname'
-
 # darn rspec warnings
 $VERBOSE = false
 begin
@@ -13,10 +10,16 @@ rescue LoadError
   require 'spec'
 end
 
+# NOTE: In jruby this must come after require 'rubygems'
+require 'cond'
+
+require 'pathname'
+
 def pipe_to_ruby(code)
   require 'quix/ruby'
   IO.popen(%{"#{Quix::Ruby::EXECUTABLE}"}, "r+") { |pipe|
     pipe.puts code
+    pipe.flush
     pipe.close_write
     pipe.read
   }

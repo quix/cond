@@ -11,21 +11,7 @@ require 'cond/loop_with'
 module Cond
   include Ext
   include LoopWith
-
-  #
-  # Restart: an outlet to allow callers to hook into your code.
-  #
-  class Restart < Proc
-    attr_accessor :message
-  end
-
-  #
-  # Handler: a function called when an exception is raised; invoke
-  # restarts from here.
-  #
-  class Handler < Proc
-    attr_accessor :message
-  end
+  include Generator
 
   #
   # Cond.invoke_restart was called with an unknown restart.
@@ -155,22 +141,13 @@ module Cond
   #
   # Call a restart; optionally pass it some arguments.
   #
-  def invoke_restart(name, *args)
+  def invoke_restart(name, *args, &block)
     available_restarts.fetch(name) {
       raise(
         NoRestartError,
-        "Did not find `#{name.inspect}' in available restarts."
+        "Did not find `#{name.inspect}' in available restarts"
       )
-    }.call(*args)
-  end
-
-  #
-  # Define a restart.  This is optional: you could just pass lambdas
-  # or Procs to with_restarts, but you'll miss the description string
-  # shown inside Cond#debugger.
-  #
-  def restart(message = "", &block)
-    Restart.new(&block).extend(Ext).tap { |t| t.message = message }
+    }.call(*args, &block)
   end
 
   #
@@ -179,9 +156,24 @@ module Cond
   # shown by whatever tools that use it (currently none).
   #
   def handler(message = "", &block)
-    Handler.new(&block).extend(Ext).tap { |t| t.message = message }
+    # this particular contortion is to avoid a jruby bug
+    Proc.new(&block).extend(Ext).tap { |func|
+      func.singleton_class.module_eval {
+        define_method(:message) {
+          message
+        }
+      }
+    }
   end
   
+  #
+  # Define a restart.  This is optional: you could just pass lambdas
+  # or Procs to with_restarts, but you'll miss the description string
+  # shown inside Cond#debugger.
+  #
+  alias_method :restart, :handler
+  module_function :restart
+
   def find_handler(target)
     Cond.handlers_stack.top.fetch(target) {
       Cond.handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
@@ -236,6 +228,9 @@ module Cond
     wrap_instance_method(singleton_class, method)
   end
   
+  ######################################################################
+  # singleton class
+
   class << self
     [:handlers_stack, :restarts_stack].each { |name|
       include ThreadLocal.accessor_module(name) {
@@ -248,6 +243,65 @@ module Cond
         Defaults.send(name)
       }
     }
+  end
+
+  ######################################################################
+  # glossy coating
+
+  def restartable(&block)
+    section = RestartableSection.new
+    section.instance_eval(&block)
+    section.__run__
+  end
+  
+  def handling(&block)
+    section = HandlingSection.new
+    section.instance_eval(&block)
+    section.__run__
+  end
+
+  class RestartableSection
+    def initialize
+      @restarts = Hash.new
+    end
+    
+    def body(&block)
+      @body = block
+    end
+    
+    def restart(sym, message = "", &block)
+      @restarts[sym] = Cond.restart(message, &block)
+    end
+
+    def __run__
+      Cond.with_restarts(@restarts) {
+        @body.call
+      }
+    end
+  end
+
+  class HandlingSection
+    def initialize
+      @handlers = Hash.new
+    end
+    
+    def body(&block)
+      @body = block
+    end
+    
+    def handle(sym, &block)
+      @handlers[sym] = block
+    end
+
+    def invoke_restart(name, *args, &block)
+      Cond.invoke_restart(name, *args, &block)
+    end
+    
+    def __run__
+      Cond.with_handlers(@handlers) {
+        @body.call
+      }
+    end
   end
 end
 
