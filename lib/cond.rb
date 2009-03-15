@@ -2,7 +2,7 @@
 require 'cond/thread_local'
 require 'cond/stack'
 require 'cond/loop_with'
-require 'cond/generator'
+require 'cond/symbol_generator'
 require 'cond/defaults'
 
 # 
@@ -329,12 +329,12 @@ module Cond
 
   class CodeSection  #:nodoc:
     include LoopWith
-    include Generator
 
     def initialize(with_functions, &block)
       @with_functions = with_functions
       @block = block
-      @leave, @again = (1..2).map { gensym }
+      @leave, @again = (1..2).map { SymbolGenerator.gensym }
+      SymbolGenerator.track(self, [@leave, @again])
     end
 
     def again(*args)

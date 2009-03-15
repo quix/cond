@@ -1,8 +1,10 @@
 
+require 'cond/symbol_generator'
+
 module Cond
   module Defaults
-    LEAVE = Generator.gensym("default leave")
-    AGAIN = Generator.gensym("default again")
+    LEAVE = SymbolGenerator.gensym
+    AGAIN = SymbolGenerator.gensym
 
     module_function
 

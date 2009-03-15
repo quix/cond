@@ -1,10 +1,10 @@
 
 require 'thread'
-require 'cond/generator'
+require 'cond/symbol_generator'
 
 module Cond
   class ThreadLocal
-    include Generator
+    include SymbolGenerator
 
     #
     # The block should create a new object (if not, the returned
@@ -15,6 +15,7 @@ module Cond
       @name = gensym(prefix)
       @accessed = gensym(prefix)
       @default = default
+      SymbolGenerator.track(self, [@name, @accessed])
     end
     
     def value
