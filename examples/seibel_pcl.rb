@@ -14,7 +14,7 @@ def parse_log_entry(text)
   if text =~ %r!\A\#!
     text.split
   else
-    raise MalformedLogEntryError, text
+    raise MalformedLogEntryError
   end
 end
 
@@ -38,7 +38,7 @@ def parse_log_file0(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = handling do
-        handle MalformedLogEntryError do |exception|
+        on MalformedLogEntryError do
         end
         parse_log_entry(text)
       end
@@ -61,7 +61,7 @@ def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = restartable do
-        restart :skip_log_entry do
+        on :skip_log_entry do
           leave
         end
         parse_log_entry(text)
@@ -72,9 +72,9 @@ def parse_log_file(file)
 end
 
 # remove this if you want to skip past here
-#Cond.debugger {
-#  parse_log_file(__FILE__)
-#}
+Cond.debugger {
+  parse_log_file(__FILE__)
+}
 
 # 
 # (defun log-analyzer ()
@@ -86,7 +86,7 @@ end
 # 
 def log_analyzer
   handling do
-    handle MalformedLogEntryError do |exception|
+    on MalformedLogEntryError do |exception|
       invoke_restart :skip_log_entry
     end
     find_all_logs.each { |log|

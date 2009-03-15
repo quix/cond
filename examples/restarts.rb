@@ -8,7 +8,7 @@ include Cond
 # http://c2.com/cgi/wiki?LispRestartExample
 #
 
-class RestartableGethashError < RuntimeError
+class RestartableFetchError < RuntimeError
   def initialize(key, hash)
     super()
     @key, @hash = key, hash
@@ -26,7 +26,7 @@ def read_new_value(what)
   eval(STDIN.readline.chomp)
 end
 
-def restartable_gethash(hash, key, default = nil)
+def restartable_fetch(hash, key, default = nil)
   restartable do
     on :continue, "Return not having found the value." do
       return
@@ -43,7 +43,7 @@ def restartable_gethash(hash, key, default = nil)
       again
     end
     hash.fetch(key) {
-      raise RestartableGethashError.new(key, hash)
+      raise RestartableFetchError.new(key, hash)
     }
   end
 end
@@ -55,15 +55,15 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-debugger {
-  puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
+with_default_handlers {
+  puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
 }
 
 #  
 #  % ruby restart.rb
-#  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:66
-#  RestartableGethashError error getting "mango" from:
+#  #<RestartableFetchError: RestartableFetchError>
+#  restart.rb:58
+#  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
 #   "tomato"=>"depends_on_who_you_ask",
@@ -78,9 +78,9 @@ debugger {
 #
 #
 #  % ruby restart.rb
-#  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:66
-#  RestartableGethashError error getting "mango" from:
+#  #<RestartableFetchError: RestartableFetchError>
+#  restart.rb:58
+#  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
 #   "tomato"=>"depends_on_who_you_ask",
@@ -96,9 +96,9 @@ debugger {
 #
 #
 #  % ruby restart.rb
-#  #<RestartableGethashError: RestartableGethashError>
-#  restart.rb:66
-#  RestartableGethashError error getting "mango" from:
+#  #<RestartableFetchError: RestartableFetchError>
+#  restart.rb:58
+#  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
 #   "tomato"=>"depends_on_who_you_ask",

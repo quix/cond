@@ -47,8 +47,8 @@ or manually,
 == Overview
 
 +Cond+ allows errors to be handled near the place where they occur,
-_before_ the stack unwinds.  It steals from the Common Lisp condition
-system.
+_before_ the stack unwinds.  It is blatantly (and eponymously) stolen
+from the Common Lisp condition system.
 
 The system is divided into two parts: _restarts_ and _handlers_.
 Restarts are like open outlets which dwell near code that could raise
@@ -83,8 +83,8 @@ handler may invoke one of the available restarts.
            |                        |                   |
            |                        |                   |
            |                        |                   |
-           |                        | .- restart_x      |
-           ^                        |/                  |
+           ^                        | .- restart_x      |
+                                    |/                  |
   (3) exception raised here ------> +--- restart_y <----+
                                      \            
                                       .- restart_z
@@ -173,7 +173,7 @@ Once this has been called, the line
 
 is unnecessary.
 
-=== Inspiration
+=== Futher Reading
 
 The Common Lisp condition system is explained in Peter Seibel's
 "Practical Common Lisp":

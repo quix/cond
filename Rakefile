@@ -1,4 +1,6 @@
 
+require 'rake'
+require 'spec/rake/spectask'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 
@@ -14,6 +16,16 @@ GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
 
 DOC_DIR = "documentation"
+
+
+Spec::Rake::SpecTask.new('rcov') do |t|
+  t.spec_files = (
+    FileList['test/test_*.rb'] +
+    FileList['examples/handlers.rb']
+  )
+  t.rcov = true
+  t.rcov_opts = ['--exclude', 'test', '--exclude', 'support']
+end
 
 ######################################################################
 # default

@@ -9,6 +9,73 @@ require 'cond/defaults'
 # Condition system for handling errors in Ruby.  See README.
 # 
 module Cond
+
+  ######################################################################
+  # singleton class -- all data is per-thread and fetched from here
+
+  class << self
+    stack_0  = lambda { |*| Stack.new }
+    stack_1  = lambda { |*| Stack.new.push(Hash.new) }
+    defaults = lambda { |name| Defaults.send(name) }
+    {
+      :code_section_stack => stack_0,
+      :exception_stack    => stack_0,
+      :handlers_stack     => stack_1,
+      :restarts_stack     => stack_1,
+      :stream             => defaults,
+      :default_handlers   => defaults,
+      :default_restarts   => defaults,
+    }.each_pair { |name, init|
+      include ThreadLocal.accessor_module(name) {
+        init.call(name)
+      }
+    }
+  end
+
+  ######################################################################
+  # Restart and Handler 
+
+  #
+  # Base class for Restart and Handler.
+  #
+  class MessageProc < Proc
+    def initialize(message = "", &block)
+      @message = message
+    end
+
+    def message
+      @message
+    end
+  end
+
+  #
+  # A restart.  Use of this is optional: you could just pass lambdas
+  # to with_restarts, but you'll miss the description string shown
+  # inside Cond#default_handler.
+  #
+  class Restart < MessageProc
+  end
+
+  #
+  # A handler.  Use of this is optional: you could just pass lambdas
+  # to with_handlers, but you'll miss the description string shown by
+  # whichever tools might use it (currently none).
+  #
+  class Handler < MessageProc
+  end
+
+  ######################################################################
+  # errors
+  
+  #
+  # Cond.invoke_restart was called with an unknown restart.
+  #
+  class NoRestartError < StandardError
+  end
+
+  ######################################################################
+  # module functions
+
   module_function
 
   #
@@ -44,6 +111,7 @@ module Cond
   #   }
   #
   def with_handlers(handlers)
+    # note: leave unfactored due to notable yield vs &block performance
     Cond.handlers_stack.push(Cond.handlers_stack.top.merge(handlers))
     begin
       yield
@@ -66,6 +134,7 @@ module Cond
   #   }
   #
   def with_restarts(restarts)
+    # note: leave unfactored due to notable yield vs &block performance
     Cond.restarts_stack.push(Cond.restarts_stack.top.merge(restarts))
     begin
       yield
@@ -79,6 +148,7 @@ module Cond
   # an exception is raised.
   #
   def with_default_handlers
+    # note: leave unfactored due to notable yield vs &block performance
     with_handlers(Cond.default_handlers) {
       yield
     }
@@ -88,6 +158,7 @@ module Cond
   # Some default restarts are provided.
   #
   def with_default_restarts
+    # note: leave unfactored due to notable yield vs &block performance
     with_restarts(Cond.default_restarts) {
       yield
     }
@@ -125,14 +196,14 @@ module Cond
   # Find a restart by name.
   #
   def find_restart(name)
-    available_restarts[name]
+    Cond.available_restarts[name]
   end
 
   #
   # Call a restart from a handler; optionally pass it some arguments.
   #
   def invoke_restart(name, *args, &block)
-    available_restarts.fetch(name) {
+    Cond.available_restarts.fetch(name) {
       raise(
         NoRestartError,
         "Did not find `#{name.inspect}' in available restarts"
@@ -155,38 +226,6 @@ module Cond
       }.sort_by { |t| t.first }.first
       found and found[1]
     }
-  end
-
-  ######################################################################
-  # Restart and Handler 
-
-  #
-  # Base class for Restart and Handler.
-  #
-  class MessageProc < Proc
-    def initialize(message = "", &block)
-      @message = message
-    end
-
-    def message
-      @message
-    end
-  end
-
-  #
-  # A restart.  Use of this is optional: you could just pass lambdas
-  # to with_restarts, but you'll miss the description string shown
-  # inside Cond#default_handler.
-  #
-  class Restart < MessageProc
-  end
-
-  #
-  # A handler.  Use of this is optional: you could just pass lambdas
-  # to with_handlers, but you'll miss the description string shown by
-  # whichever tools might use it (currently none).
-  #
-  class Handler < MessageProc
   end
 
   ######################################################################
@@ -234,35 +273,13 @@ module Cond
   end
 
   ######################################################################
-  # errors
+  # original raise
   
   #
-  # Cond.invoke_restart was called with an unknown restart.
+  # MRI 1.9 does not like this.  Now aliased in Kernel.
   #
-  class NoRestartError < StandardError
-  end
-
-  ######################################################################
-  # singleton class
-
-  class << self
-    stack_0  = lambda { |*| Stack.new }
-    stack_1  = lambda { |*| Stack.new.push(Hash.new) }
-    defaults = lambda { |name| Defaults.send(name) }
-    {
-      :code_section_stack => stack_0,
-      :exception_stack    => stack_0,
-      :handlers_stack     => stack_1,
-      :restarts_stack     => stack_1,
-      :stream             => defaults,
-      :default_handlers   => defaults,
-      :default_restarts   => defaults,
-    }.each_pair { |name, init|
-      include ThreadLocal.accessor_module(name) {
-        init.call(name)
-      }
-    }
-  end
+  #define_method :original_raise, Kernel.instance_method(:raise)
+  #module_function :original_raise
 
   ######################################################################
   # shiny exterior
@@ -293,18 +310,22 @@ module Cond
   end
 
   #
-  # While inside a +restartable+ section, define a restart.
-  # While inside a +handling+ section, define a handler.
+  # While inside a +restartable+ section, define a restart.  When a
+  # handler calls invoke_restart, it may pass additional arguments
+  # which arrive in the restart's block parameters.
   #
-  def on(symbol, message = "", &block)
-    Cond.code_section_stack.top.on(symbol, message, &block)
+  # While inside a +handling+ section, define a handler.  There is
+  # always a single block parameter passed which is the Exception
+  # instance.
+  #
+  # See the README.
+  #
+  def on(arg, message = "", &block)
+    Cond.code_section_stack.top.on(arg, message, &block)
   end
 
-  #
-  # Begin a restartable section of code.
-  #
-  def restartable(&block)
-    section = RestartableSection.new(&block)
+  def run_code_section(klass, &block)
+    section = klass.new(&block)
     Cond.code_section_stack.push(section)
     begin
       section.instance_eval { run }
@@ -314,17 +335,18 @@ module Cond
   end
   
   #
+  # Begin a restartable section of code.
+  #
+  def restartable(&block)
+    run_code_section(RestartableSection, &block)
+  end
+  
+  #
   # Begin a section of code in which exceptions may be handled without
   # unwinding the stack.
   #
   def handling(&block)
-    section = HandlingSection.new(&block)
-    Cond.code_section_stack.push(section)
-    begin
-      section.instance_eval { run }
-    ensure
-      Cond.code_section_stack.pop
-    end
+    run_code_section(HandlingSection, &block)
   end
 
   class CodeSection  #:nodoc:
@@ -380,28 +402,24 @@ module Cond
       Cond.handlers_stack.top[sym] = Handler.new(message, &block)
     end
   end
-
-  ######################################################################
-  # original raise
-
-  define_method :original_raise, &method(:raise)
-  module_function :original_raise
 end
 
 module Kernel
+  alias_method :cond_original_raise, :raise
   remove_method :raise
   def raise(*args)
     if Cond.exception_stack.top
       # we are inside a handler
       if args.empty?
-        Cond.original_raise(Cond.exception_stack.top)
+        cond_original_raise(Cond.exception_stack.top)
       else
-        Cond.original_raise(*args)
+        cond_original_raise(*args)
       end
     else
+      exception = nil
       # not inside a handler
       begin
-        Cond.original_raise(*args)
+        cond_original_raise(*args)
       rescue Exception => exception
       end
       handler = Cond.find_handler(exception.class)
@@ -413,10 +431,11 @@ module Kernel
           Cond.exception_stack.pop
         end
       else
-        Cond.original_raise(exception)
+        cond_original_raise(exception)
       end
     end
   end
+  alias_method :cond_original_fail, :fail
   remove_method :fail
   alias_method :fail, :raise
 end

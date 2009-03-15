@@ -3,9 +3,6 @@ require 'cond/symbol_generator'
 
 module Cond
   module Defaults
-    LEAVE = SymbolGenerator.gensym
-    AGAIN = SymbolGenerator.gensym
-
     module_function
 
     def default_handler(exception)
@@ -23,16 +20,16 @@ module Cond
         }
       }
       
-      index = LoopWith.loop_with(LEAVE) {
+      index = LoopWith.loop_with(:leave) {
         restarts.each_with_index { |restart, inner_index|
-          message = let {
-            t = restart[:func]
+          t = restart[:func]
+          message = (
             if t.respond_to?(:message) and t.message != ""
               t.message + " "
             else
               ""
             end
-          }
+          )
           stream.printf(
             "%3d: %s(:%s)\n",
             inner_index, message, restart[:name]
@@ -42,7 +39,7 @@ module Cond
         stream.flush
         input = STDIN.readline.strip
         if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
-          throw LEAVE, input.to_i
+          throw :leave, input.to_i
         end
       }
       restarts[index][:func].call(exception)
