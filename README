@@ -30,7 +30,7 @@ Lisp condition system.
       puts divide(7, 0)   # => 42
     end
     handle ZeroDivisionError do
-      invoke_restart(:return_this_instead, 42)
+      invoke_restart :return_this_instead, 42
     end
   end
 

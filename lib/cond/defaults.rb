@@ -1,8 +1,18 @@
 
 require 'cond'
+require 'cond/loop_with'
 
 module Cond
   module Defaults
+    include Ext
+    extend Ext
+
+    include LoopWith
+    extend LoopWith
+
+    DONE = Generator.gensym("default handler done")
+    AGAIN = Generator.gensym("default handler again")
+
     module_function
 
     def default_handler(exception)
@@ -20,7 +30,7 @@ module Cond
         }
       }
       
-      index = loop_with(:done) {
+      index = loop_with(DONE, AGAIN) {
         restarts.each_with_index { |restart, inner_index|
           message = let {
             t = restart[:func]
@@ -39,7 +49,7 @@ module Cond
         stream.flush
         input = STDIN.readline.strip
         if input =~ %r!\A\d+\Z! and (0...restarts.size).include?(input.to_i)
-          throw :done, input.to_i
+          throw DONE, input.to_i
         end
       }
       restarts[index][:func].call(exception)
@@ -53,14 +63,14 @@ module Cond
 
     def default_restarts
       {
-        :raise => restart("Raise this exception.") { |exception|
+        :raise => Cond.restart("Raise this exception.") {
           raise
         },
-        :eval => restart("Run some code.") {
+        :eval => Cond.restart("Run some code.") {
           Cond.stream.print("Enter code: ")
           eval(STDIN.readline.strip)
         },
-        :backtrace => restart("Show backtrace.") { |exception|
+        :backtrace => Cond.restart("Show backtrace.") { |exception|
           Cond.stream.puts exception.backtrace
         },
       }

@@ -263,9 +263,11 @@ module Cond
   class RestartableSection
     def initialize
       @restarts = Hash.new
+      @done, @again = (1..2).map { Generator.gensym }
+      @body_args = []
     end
     
-    def body(&block)
+    def body(*args, &block)
       @body = block
     end
     
@@ -273,9 +275,27 @@ module Cond
       @restarts[sym] = Cond.restart(message, &block)
     end
 
+    def again(*args)
+      @body_args = args
+      throw @again
+    end
+
+    def done(*args)
+      case args.size
+      when 0
+        throw @done
+      when 1
+        throw @done, args.first
+      else
+        throw @done, args
+      end
+    end
+
     def __run__
-      Cond.with_restarts(@restarts) {
-        @body.call
+      LoopWith.loop_with(@done, @again) {
+        Cond.with_restarts(@restarts) {
+          throw @done, @body.call(*@body_args)
+        }
       }
     end
   end

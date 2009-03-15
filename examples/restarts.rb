@@ -1,19 +1,16 @@
-#
-# http://c2.com/cgi/wiki?LispRestartExample
-#
-
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 require 'cond'
 require 'pp'
 
-include Cond  # (optional)
+#
+# http://c2.com/cgi/wiki?LispRestartExample
+#
 
 class RestartableGethashError < RuntimeError
-  def initialize(info)
+  def initialize(key, hash)
     super()
-    @key, @hash = info
+    @key, @hash = key, hash
   end
-
   def message
     sprintf(
       "%s error getting %s from:\n%s",
@@ -28,32 +25,27 @@ def read_new_value(what)
 end
 
 def restartable_gethash(hash, key, default = nil)
-  restarts = {
-    :continue => restart("Return not having found the value.") {
-      throw :break
-    },
-    :try_again => restart("Try getting the key from the hash again.") {
-      throw :next
-    },
-    :use_new_key => restart("Use a new key.") { |exception|
-      key.replace read_new_value("key")
-    },
-    :use_new_hash => restart("Use a new hash.") { |exception|
-      hash.replace read_new_value("hash")
-    },
-  }
-
-  with_restarts(restarts) {
-    # 'throw :break' is like 'break', 'throw :next' is like 'next'
-    loop_with(:break, :next) {
-      value = hash[key]
-      if value
-        return value
-      else
-        raise RestartableGethashError, [key, hash]
-      end
-    }
-  }
+  Cond.restartable do
+    body do
+      hash.fetch(key) {
+        raise RestartableGethashError.new(key, hash)
+      }
+    end
+    restart :continue, "Return not having found the value." do
+      return
+    end
+    restart :try_again, "Try getting the key from the hash again." do
+      again
+    end
+    restart :use_new_key, "Use a new key." do |exception|
+      key = read_new_value("key")
+      again
+    end
+    restart :use_new_hash, "Use a new hash." do |exception|
+      hash = read_new_value("hash")
+      again
+    end
+  end
 end
 
 fruits_and_vegetables = Hash[*%w[
@@ -63,7 +55,7 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-with_default_handlers {
+Cond.with_default_handlers {
   puts("value: " + restartable_gethash(fruits_and_vegetables, "mango").inspect)
 }
 
