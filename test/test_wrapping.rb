@@ -1,21 +1,24 @@
 require File.dirname(__FILE__) + "/common"
 
+include Cond
+
 describe "singleton method defined in C" do
   before :all do
     @memo = []
-    @handlers = {
-      ArgumentError => lambda { |e|
+    @define_handler = lambda {
+      on ArgumentError do
         @memo.push :handled
-      }
+      end
     }
   end
 
   describe "unwrapped" do
     it "should unwind" do
       lambda {
-        Cond.with_handlers(@handlers) {
+        handling do
+          @define_handler.call
           IO.read
-        }
+        end
       }.should raise_error(ArgumentError)
     end
     
@@ -26,14 +29,15 @@ describe "singleton method defined in C" do
 
   describe "wrapped" do
     before :all do
-      Cond.wrap_singleton_method(IO, :read)
+      wrap_singleton_method(IO, :read)
     end
     
     it "should not unwind" do
       lambda {
-        Cond.with_handlers(@handlers) {
+        handling do
+          @define_handler.call
           IO.read
-        }
+        end
       }.should_not raise_error(ArgumentError)
     end
 
@@ -46,19 +50,20 @@ end
 describe "instance method defined in C" do
   before :all do
     @memo = []
-    @handlers = {
-      ZeroDivisionError => lambda { |e|
+    @define_handler = lambda {
+      on ZeroDivisionError do |exception|
         @memo.push :handled
-      }
+      end
     }
   end
 
   describe "unwrapped" do
     it "should unwind" do
       lambda {
-        Cond.with_handlers(@handlers) {
+        handling do
+          @define_handler.call
           3/0
-        }
+        end
       }.should raise_error(ZeroDivisionError)
     end
 
@@ -69,14 +74,15 @@ describe "instance method defined in C" do
 
   describe "wrapped" do
     before :all do
-      Cond.wrap_instance_method(Fixnum, :/)
+      wrap_instance_method(Fixnum, :/)
     end
     
     it "should not unwind" do
       lambda {
-        Cond.with_handlers(@handlers) {
+        handling do
+          @define_handler.call
           3/0
-        }
+        end
       }.should_not raise_error(ZeroDivisionError )
     end
 
