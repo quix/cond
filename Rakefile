@@ -3,10 +3,7 @@ require 'rake'
 require 'spec/rake/spectask'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
-
-$VERBOSE = nil
 require 'rdoc/rdoc'
-$VERBOSE = true
 
 require 'fileutils'
 include FileUtils
@@ -14,11 +11,12 @@ include FileUtils
 PROJECT_NAME = "cond"
 GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
-
 DOC_DIR = "documentation"
 
+######################################################################
+# coverage
 
-Spec::Rake::SpecTask.new('rcov') do |t|
+Spec::Rake::SpecTask.new('cov') do |t|
   t.spec_files = (
     FileList['test/test_*.rb'] +
     FileList['examples/handlers.rb']
@@ -26,6 +24,8 @@ Spec::Rake::SpecTask.new('rcov') do |t|
   t.rcov = true
   t.rcov_opts = ['--exclude', 'test', '--exclude', 'support']
 end
+
+task :rcov => :cov
 
 ######################################################################
 # default
@@ -59,25 +59,6 @@ Rake::GemPackageTask.new(GEMSPEC) { |t|
 }
 
 ######################################################################
-# utils
-
-task :pull_utils do
-  %w[ext generator loop_with stack thread_local].each { |stem|
-    basename = stem + ".rb"
-    source = "../quix/lib/quix/" + basename
-    dest = "lib/cond/" + basename
-    contents = (
-      File.read(source).
-      gsub("Quix", "Cond").
-      gsub("quix", "cond")
-    )
-    File.open(dest, "w") { |out|
-      out.print contents
-    }
-  }
-end
-
-######################################################################
 # doc
 
 task :doc => :clean_doc do 
@@ -98,8 +79,7 @@ task :rdoc => :doc
 # git
 
 def git(*args)
-  cmd = ["git"] + args
-  sh(*cmd)
+  sh("git", *args)
 end
 
 ######################################################################
@@ -124,12 +104,14 @@ task :prerelease => :clean do
 end
 
 def rubyforge(command, file)
-  sh("rubyforge",
-     command,
-     GEMSPEC.rubyforge_project,
-     GEMSPEC.rubyforge_project,
-     GEMSPEC.version.to_s,
-     file)
+  sh(
+    "rubyforge",
+    command,
+    GEMSPEC.rubyforge_project,
+    GEMSPEC.rubyforge_project,
+    GEMSPEC.version.to_s,
+    file
+  )
 end
 
 task :finish_release do
