@@ -29,7 +29,7 @@ describe "singleton method defined in C" do
 
   describe "wrapped" do
     before :all do
-      wrap_singleton_method(IO, :read)
+      Cond.wrap_singleton_method(IO, :read)
     end
     
     it "should not unwind" do
@@ -74,7 +74,7 @@ describe "instance method defined in C" do
 
   describe "wrapped" do
     before :all do
-      wrap_instance_method(Fixnum, :/)
+      Cond.wrap_instance_method(Fixnum, :/)
     end
     
     it "should not unwind" do

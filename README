@@ -126,7 +126,6 @@ You are free to use either form according to the situation.
 === Raw Form
 
   require 'cond'
-  include Cond
   
   def divide(x, y)
     restarts = {
@@ -135,7 +134,7 @@ You are free to use either form according to the situation.
       }
     }
     catch :leave do
-      with_restarts restarts do
+      Cond.with_restarts restarts do
         raise ZeroDivisionError if y == 0
         x/y
       end
@@ -144,10 +143,10 @@ You are free to use either form according to the situation.
   
   handlers = {
     ZeroDivisionError => lambda { |exception|
-      invoke_restart :return_this_instead, 42
+      Cond.invoke_restart :return_this_instead, 42
     }
   }
-  with_handlers handlers do
+  Cond.with_handlers handlers do
     puts divide(10, 2)  # => 5
     puts divide(18, 3)  # => 6
     puts divide(4, 0)   # => 42

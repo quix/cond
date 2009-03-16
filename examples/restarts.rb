@@ -55,7 +55,7 @@ fruits_and_vegetables = Hash[*%w[
    tomato depends_on_who_you_ask
 ]]
 
-with_default_handlers {
+Cond.with_default_handlers {
   puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
 }
 

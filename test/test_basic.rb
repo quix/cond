@@ -23,13 +23,13 @@ describe Cond do
       }
       f = lambda {
         memo.push :f
-        with_restarts(restarts) {
+        Cond.with_restarts(restarts) {
           memo.push :raise
           raise ExampleError
         }
       }
       memo.push :first
-      with_handlers(handlers) {
+      Cond.with_handlers(handlers) {
         f.call
       }
       memo.push :last
