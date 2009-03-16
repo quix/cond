@@ -1,9 +1,9 @@
 
-require 'cond/thread_local'
-require 'cond/stack'
-require 'cond/loop_with'
-require 'cond/symbol_generator'
-require 'cond/defaults'
+require 'cond/cond_inner/thread_local'
+require 'cond/cond_inner/stack'
+require 'cond/cond_inner/loop_with'
+require 'cond/cond_inner/symbol_generator'
+require 'cond/cond_inner/defaults'
 
 # 
 # Condition system for handling errors in Ruby.  See README.
@@ -14,9 +14,9 @@ module Cond
   # singleton class -- all data is per-thread and fetched from here
 
   class << self
-    stack_0  = lambda { |*| Stack.new }
-    stack_1  = lambda { |*| Stack.new.push(Hash.new) }
-    defaults = lambda { |name| Defaults.send(name) }
+    stack_0  = lambda { |*| CondInner::Stack.new }
+    stack_1  = lambda { |*| CondInner::Stack.new.push(Hash.new) }
+    defaults = lambda { |name| CondInner::Defaults.send(name) }
     {
       :code_section_stack => stack_0,
       :exception_stack    => stack_0,
@@ -26,7 +26,7 @@ module Cond
       :default_handlers   => defaults,
       :default_restarts   => defaults,
     }.each_pair { |name, init|
-      include ThreadLocal.accessor_module(name) {
+      include CondInner::ThreadLocal.accessor_module(name) {
         init.call(name)
       }
     }
@@ -35,16 +35,18 @@ module Cond
   ######################################################################
   # Restart and Handler 
 
-  #
-  # Base class for Restart and Handler.
-  #
-  class MessageProc < Proc
-    def initialize(message = "", &block)
-      @message = message
-    end
-
-    def message
-      @message
+  module CondInner
+    #
+    # Base class for Restart and Handler.
+    #
+    class MessageProc < Proc
+      def initialize(message = "", &block)
+        @message = message
+      end
+      
+      def message
+        @message
+      end
     end
   end
 
@@ -53,7 +55,7 @@ module Cond
   # to with_restarts, but you'll miss the description string shown
   # inside Cond#default_handler.
   #
-  class Restart < MessageProc
+  class Restart < CondInner::MessageProc
   end
 
   #
@@ -61,7 +63,7 @@ module Cond
   # to with_handlers, but you'll miss the description string shown by
   # whichever tools might use it (currently none).
   #
-  class Handler < MessageProc
+  class Handler < CondInner::MessageProc
   end
 
   ######################################################################
@@ -338,7 +340,7 @@ module Cond
   # Begin a restartable section of code.
   #
   def restartable(&block)
-    run_code_section(RestartableSection, &block)
+    run_code_section(CondInner::RestartableSection, &block)
   end
   
   #
@@ -346,61 +348,63 @@ module Cond
   # unwinding the stack.
   #
   def handling(&block)
-    run_code_section(HandlingSection, &block)
+    run_code_section(CondInner::HandlingSection, &block)
   end
 
-  class CodeSection  #:nodoc:
-    include LoopWith
-    include SymbolGenerator
+  module CondInner
+    class CodeSection  #:nodoc:
+      include LoopWith
+      include SymbolGenerator
+      
+      def initialize(with, &block)
+        @with = with
+        @block = block
+        @leave, @again = gensym, gensym
+        SymbolGenerator.track(self, [@leave, @again])
+      end
+      
+      def again(*args)
+        throw @again
+      end
 
-    def initialize(with, &block)
-      @with = with
-      @block = block
-      @leave, @again = gensym, gensym
-      SymbolGenerator.track(self, [@leave, @again])
-    end
+      def leave(*args)
+        case args.size
+        when 0
+          throw @leave
+        when 1
+          throw @leave, args.first
+        else
+          throw @leave, args
+        end
+      end
 
-    def again(*args)
-      throw @again
-    end
-
-    def leave(*args)
-      case args.size
-      when 0
-        throw @leave
-      when 1
-        throw @leave, args.first
-      else
-        throw @leave, args
+      def run
+        loop_with(@leave, @again) {
+          Cond.send(@with, Hash.new) {
+            throw @leave, @block.call
+          }
+        }
       end
     end
 
-    def run
-      loop_with(@leave, @again) {
-        Cond.send(@with, Hash.new) {
-          throw @leave, @block.call
-        }
-      }
+    class RestartableSection < CodeSection  #:nodoc:
+      def initialize(&block)
+        super(:with_restarts, &block)
+      end
+      
+      def on(sym, message, &block)
+        Cond.restarts_stack.top[sym] = Restart.new(message, &block)
     end
-  end
-
-  class RestartableSection < CodeSection  #:nodoc:
-    def initialize(&block)
-      super(:with_restarts, &block)
     end
 
-    def on(sym, message, &block)
-      Cond.restarts_stack.top[sym] = Restart.new(message, &block)
-    end
-  end
-
-  class HandlingSection < CodeSection  #:nodoc:
-    def initialize(&block)
-      super(:with_handlers, &block)
-    end
-
-    def on(sym, message, &block)
-      Cond.handlers_stack.top[sym] = Handler.new(message, &block)
+    class HandlingSection < CodeSection  #:nodoc:
+      def initialize(&block)
+        super(:with_handlers, &block)
+      end
+      
+      def on(sym, message, &block)
+        Cond.handlers_stack.top[sym] = Handler.new(message, &block)
+      end
     end
   end
 end
