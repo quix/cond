@@ -34,7 +34,7 @@ end
 #                      (malformed-log-entry-error () nil))
 #        when entry collect it)))
 #
-def parse_log_file0(file)
+def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = handling do
@@ -47,7 +47,7 @@ def parse_log_file0(file)
   }
 end
 
-parse_log_file0(__FILE__)
+parse_log_file(__FILE__)
 
 # 
 # (defun parse-log-file (file)
@@ -86,7 +86,7 @@ Cond.debugger {
 # 
 def log_analyzer
   handling do
-    on MalformedLogEntryError do |exception|
+    on MalformedLogEntryError do
       invoke_restart :skip_log_entry
     end
     find_all_logs.each { |log|
