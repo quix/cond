@@ -351,11 +351,12 @@ module Cond
 
   class CodeSection  #:nodoc:
     include LoopWith
+    include SymbolGenerator
 
-    def initialize(with_functions, &block)
-      @with_functions = with_functions
+    def initialize(with, &block)
+      @with = with
       @block = block
-      @leave, @again = (1..2).map { SymbolGenerator.gensym }
+      @leave, @again = gensym, gensym
       SymbolGenerator.track(self, [@leave, @again])
     end
 
@@ -376,7 +377,7 @@ module Cond
 
     def run
       loop_with(@leave, @again) {
-        Cond.send(@with_functions, Hash.new) {
+        Cond.send(@with, Hash.new) {
           throw @leave, @block.call
         }
       }

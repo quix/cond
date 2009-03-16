@@ -3,10 +3,10 @@ require 'thread'
 
 module Cond
   module SymbolGenerator
-    @object_id_to_sym_list = Hash.new
-    @mutex = Mutex.new
     @count = 0
+    @mutex = Mutex.new
     @recycled = []
+    @object_id_to_sym_list = Hash.new
     @finalizer = lambda { |id|
       recycle(@object_id_to_sym_list[id])
       @object_id_to_sym_list.delete id
@@ -35,8 +35,10 @@ module Cond
       end
       
       def track(object, syms)
-        @object_id_to_sym_list[object.object_id] = syms.dup
-        ObjectSpace.define_finalizer(object, @finalizer)
+        @mutex.synchronize {
+          @object_id_to_sym_list[object.object_id] = syms.dup
+          ObjectSpace.define_finalizer(object, @finalizer)
+        }
       end
     end
     
