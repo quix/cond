@@ -1,6 +1,5 @@
 
 require 'cond/cond_inner/thread_local'
-require 'cond/cond_inner/loop_with'
 require 'cond/cond_inner/symbol_generator'
 require 'cond/cond_inner/defaults'
 
@@ -289,9 +288,18 @@ module Cond
   
   module CondInner
     class CodeSection  #:nodoc:
-      include LoopWith
       include SymbolGenerator
       
+      def loop_with(leave_sym, again_sym)
+        catch(leave_sym) {
+          while true
+            catch(again_sym) {
+              yield
+            }
+          end
+        }
+      end
+
       def initialize(with, &block)
         @with = with
         @block = block
