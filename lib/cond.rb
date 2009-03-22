@@ -111,8 +111,8 @@ module Cond
     end
       
     #
-    # A default handler is provided which runs a simple input loop when
-    # an exception is raised.
+    # A default handler is provided which runs a simple
+    # choose-a-restart input loop when +raise+ is called.
     #
     def with_default_handlers
       # note: leave unfactored due to notable yield vs &block performance
@@ -122,34 +122,13 @@ module Cond
     end
   
     #
-    # Some default restarts are provided.
+    # Calls Cond.defaults.debugger.
     #
-    def with_default_restarts
-      # note: leave unfactored due to notable yield vs &block performance
-      with_restarts(defaults.restarts) {
-        yield
-      }
-    end
-  
+    # The stock debugger uses the default handlers and adds a few
+    # simple restarts to the set of available restarts.
     #
-    # Registers the default handlers and default restarts, and adds a
-    # restart to leave the input loop.
-    #
-    def debugger
-      restarts = {
-        :leave_debugger => Restart.new("Leave debugger") {
-          throw :leave_debugger
-        }
-      }
-      catch(:leave_debugger) {
-        with_default_handlers {
-          with_default_restarts {
-            with_restarts(restarts) {
-              yield
-            }
-          }
-        }
-      }
+    def debugger(&block)
+      Cond.defaults.debugger(&block)
     end
   
     #
@@ -159,13 +138,6 @@ module Cond
       restarts_stack.last
     end
       
-    #
-    # Find a restart by name.
-    #
-    def find_restart(name)
-      available_restarts[name]
-    end
-  
     #
     # Find the closest-matching handler for the given Exception.
     #
@@ -252,7 +224,19 @@ module Cond
 
     ######################################################################
     # data -- all data is per-thread and fetched from the singleton class
-    
+    #
+    # Cond.defaults contains the default handlers and restarts.  To
+    # replace it, call
+    #
+    #   Cond.defaults.clear(&block)
+    #
+    # where &block creates a new instance of your class which
+    # implements the methods 'handlers' and 'debugger'.
+    #
+    # Note that &block should return a brand new instance.  Otherwise
+    # the returned object will be shared across threads.
+    #
+
     stack_0  = lambda { Array.new }
     stack_1  = lambda { Array.new.push(Hash.new) }
     defaults = lambda { CondPrivate::Defaults.new }
@@ -269,19 +253,6 @@ module Cond
     }
 
     include CondPrivate::ThreadLocal.accessor_module(:reraise_count) { 0 }
-
-    #
-    # Cond.defaults contains the default handlers and restarts.  To
-    # replace it, call
-    #
-    #   Cond.defaults.clear(&block)
-    #
-    # where &block creates a new instance of your class which
-    # implements the methods 'handlers' and 'restarts'.
-    #
-    # Note that &block should return a brand new instance.  Otherwise
-    # the returned object will be shared across threads.
-    #
   end
 
   ######################################################################
