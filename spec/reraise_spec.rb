@@ -71,4 +71,31 @@ describe "re-raise" do
       @memo.should == [:inner, :outer]
     end
   end
+
+  describe "nested with empty inner blocks" do
+    before :all do
+      @memo = []
+      @func = lambda {
+        handling do
+          handle ReraiseExampleError do
+            @memo.push :outer
+            raise
+          end 
+          handling do
+            handling do
+              raise ReraiseExampleError
+            end
+          end
+        end
+      }
+    end
+
+    it "should transfer to handlers earlier in the stack" do
+      @func.should raise_error(ReraiseExampleError)
+    end
+    
+    it "should call the re-raising handler once" do
+      @memo.should == [:outer]
+    end
+  end
 end

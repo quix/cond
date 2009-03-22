@@ -404,7 +404,7 @@ module Kernel
       # not using Cond
       Cond.original_raise(*args)
     else
-      last_exception = Cond.exception_stack.last
+      last_exception, current_handler = Cond.exception_stack.last
       exception = (
         if last_exception and args.empty?
           last_exception
@@ -416,7 +416,7 @@ module Kernel
           end
         end
       )
-      if last_exception
+      if current_handler
         # inside a handler
         handler = loop {
           Cond.reraise_count += 1
@@ -425,7 +425,7 @@ module Kernel
             break nil
           end
           found = Cond.find_handler_from(handlers, exception.class)
-          if found
+          if found and found != current_handler
             break found
           end
         }
@@ -440,7 +440,7 @@ module Kernel
         Cond.reraise_count = 0
         handler = Cond.find_handler(exception.class)
         if handler
-          Cond.exception_stack.push(exception)
+          Cond.exception_stack.push([exception, handler])
           begin
             handler.call(exception)
           ensure
