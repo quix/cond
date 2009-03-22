@@ -31,12 +31,6 @@ the stack.
     puts divide(7, 0)   # => 42
   end
 
-== Other Examples
-
-  examples/handlers.rb
-  examples/restarts.rb
-  test/test_*.rb
-
 == Install
 
   % gem install cond
@@ -47,29 +41,24 @@ or
 
 == Overview
 
-+Cond+ allows errors to be handled at the place where they occur.  You
-decide whether or not the stack should be unwound, depending on the
-circumstance and the error.
++Cond+ allows errors to be resolved at the place where they occur.  It
+is stolen from the Common Lisp condition system.
 
-The system is divided into two parts: _restarts_ and _handlers_.
-Restarts are like panic buttons which are placed in the vicinity of
-error-producing code.  The panic buttons reside on a large control
-panel, and handlers are like persons attending to this control panel.
-
-When +raise+ is called and there is a related handler for the error,
-the normal raise mechanism of unwinding the stack is suspended while
-the handler is called instead.  At this time, the handler may invoke
-one of the available restarts.
+The system is divided into two parts: _restarts_ and _handlers_.  When
++raise+ is called and there is a related handler for the error, the
+normal mechanism of unwinding the stack is suspended while the handler
+is called instead.  At this time, the handler may invoke one of the
+available restarts.
 
   (1) program start (stack top) --> +
                                     |
                                     |
                                     |
-                                    | .- handler_a 
-                                    |/             
-  (2) handlers set up here -------> +--- handler_b 
-                                    |\             
-                                    | .- handler_c -----+
+                                    |<-- handler_a 
+                                    |
+   (2) handlers are set up -------> |<-- handler_b 
+                                    |
+                                    |<-- handler_c -----+
                                     |       .           |
                                     |      /|\          |
                                     |       |           |
@@ -83,48 +72,89 @@ one of the available restarts.
            |                        |      handler      |
            |                        |                   |
            |                        |                   |
-           |                        |                   |
-           ^                        | .- restart_x      |
-                                    |/                  |
-  (3) exception raised here ------> +--- restart_y <----+
-                                     \            
-                                      .- restart_z
+           |                        |<-- restart_x      |
+           ^                        |                   |
+                                    |<-- restart_y <----+
+  (3) exception raised here ------> |
+                                    +<-- restart_z
 
-A handler may find a way to negate the problem and, by pushing one of
-the restart buttons, allow execution to continue as normal from the
-point where +raise+ was called.  Or a handler may choose to allow the
-exception to propagate in the usual unwinding fashion, as if the
-handler was never called.
+A handler may find a way to negate the problem and, by invoking a
+restart, allow execution to continue from the point where +raise+ was
+called.  Or a handler may choose to allow the exception to propagate
+in the usual unwinding fashion, as if the handler was never called.
 
-It is ideal for library writers to provide restarts inside their
-library.  They can anticipate errors and offer options in dealing with
-them.  Their understanding of the code is likely to be better than
-anyone using it, so they are best equipped to design the panic
-buttons.
+== Synopsis 2.0
+  
+  x, y = 7, 0
+  
+  handling do
+    handle ZeroDivisionError do |exception|
+      invoke_restart :return_this_instead, 42
+    end
+  
+    result = restartable do
+      restart :return_this_instead do |value|
+        leave value
+      end
 
-When you rescue an exception which was raised deep inside a library,
-at that moment it is often too late.  You may have lost a significant
-portion of your application state from the stack being rewound.
+      raise ZeroDivisionError if y == 0
+      x/y
+    end
+  
+    puts result  # => 42
+  end
 
-There is another restarts/handlers analogy in addition to the one of
-panic-button/control-panel-guy.
+This demonstrates +leave+, which acts like +return+ for the current
++handling+ or +restartable+ block.  Its counterpart is +again+, which
+acts like +redo+ for the current +handling+ or +restartable+ block.
 
-The condition system takes place in bullet time.  The exception is the
-bullet coming at you.  The distance between you and the bullet
-represents the stack.  When you rescue an exception, the bullet has
-already entered your body.  You are wounded and need to be rescued.
-But wait -- you are inside a +rescue+ block: you are rescuer!
++handling+ and +restartable+ blocks may be nested arbitrarily.
 
-What if you could stop time at the moment the bullet is fired?  This
-is what +Cond+'s redefinition of Kernel#raise does.  It allows you to
-ponder the present situation while the bullet hangs in mid-air.
+== Another Example
 
-In order to keep the analogy going, the person firing at you would not
-be a person but a robot.  The robot's creator placed a button on the
-robot's chest which says, "Press here if robot is malfunctioning and
-firing bullets." That's the restart.  Finally, you are the handler --
-you decide whether to get shot (which might be best after all) or to
-press the button.
+  class FredError < RuntimeError ; end
+  class WilmaError < RuntimeError ; end
+  
+  handling do
+    # We are able to handle Fred errors immediately; no need to unwind
+    # the stack.
+    handle FredError do
+      # ...
+      puts "Handled a FredError. Continuing..."
+    end
+    
+    # We want to be informed of Wilma errors, but we can't handle them.
+    handle WilmaError do
+      puts "Got a WilmaError. Re-raising..."
+      raise
+    end
+  
+    raise FredError
+    # => Handled a FredError. Continuing...
+      
+    handling do
+      # We want to ignore Wilma errors here.
+      handle WilmaError do
+        puts "Ignored WilmaError."
+      end
+      
+      raise WilmaError
+      # => Ignored WilmaError.
+        
+      # the FredError handler is still active
+      raise FredError
+      # => Handled a FredError. Continuing...
+    end
+  
+    # The previous WilmaError handler has been restored.
+    begin
+      raise WilmaError, "should not be ignored"
+    rescue WilmaError => e
+      puts "Rescued: #{e.inspect}"
+    end
+    # => Got a WilmaError. Re-raising...
+    # => Rescued: #<WilmaError: should not be ignored>
+  end
 
 == Technical Notes
 
@@ -150,7 +180,7 @@ The implementation is small and simple: it basically consists of two
 per-thread stacks of hashes (handlers and restarts) and a redefinition
 of +raise+.
 
-The syntax shown in the above synopsis is a thin layer concealing the
+The syntax shown in the above examples is a thin layer concealing the
 underlying hashes.  It is equivalent to the following raw form.  You
 are free to use either form according to taste or circumstances.
 
@@ -207,17 +237,18 @@ is unnecessary.
 
 === Further
 
-Peter Seibel discusses the Lisp condition system in this video (I have
-fast-forwarded to the relevant part),
+Peter Seibel discusses the motivation and advantages of the condition
+system "restart" ability in this video (I have fast-forwarded to the
+most relevant part, though the whole talk is worthwhile),
 
-http://video.google.com/videoplay?docid=448441135356213813#41m30s
+http://video.google.com/videoplay?docid=448441135356213813#46m07s
 
-and in his book
+When he says "signal," think of Cond's special "raise".  He uses an
+example from his book,
 
 http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 
-A few examples given there have been translated to Ruby in
-examples/seibel_pcl.rb.
+which has been translated to Ruby in examples/seibel_pcl.rb.
 
 == Links
 

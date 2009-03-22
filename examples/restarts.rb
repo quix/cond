@@ -1,12 +1,12 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
-require 'cond'
-require 'pp'
-
-include Cond
 
 #
 # http://c2.com/cgi/wiki?LispRestartExample
 #
+
+require 'pp'
+require 'cond'
+include Cond
 
 class RestartableFetchError < RuntimeError
   def initialize(key, hash)
@@ -60,9 +60,9 @@ Cond.with_default_handlers {
 }
 
 #  
-#  % ruby restart.rb
+#  % ruby restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
-#  restart.rb:58
+#  restarts.rb:58
 #  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -77,9 +77,9 @@ Cond.with_default_handlers {
 #  value: nil
 #
 #
-#  % ruby restart.rb
+#  % ruby restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
-#  restart.rb:58
+#  restarts.rb:58
 #  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
@@ -95,9 +95,9 @@ Cond.with_default_handlers {
 #  value: "mangoish fruit"
 #
 #
-#  % ruby restart.rb
+#  % ruby restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
-#  restart.rb:58
+#  restarts.rb:58
 #  RestartableFetchError error getting "mango" from:
 #  {"orange"=>"fruit",
 #   "apple"=>"fruit",
