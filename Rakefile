@@ -9,6 +9,7 @@ require 'pathname'
 require 'fileutils'
 include FileUtils
 
+README = "README"
 PROJECT_NAME = "cond"
 GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
@@ -50,6 +51,24 @@ task :show_full_spec => :full_spec do
 end
 
 ######################################################################
+# readme
+
+task :readme do
+  readme = File.read(README)
+  restarts = File.read("readmes/restarts.rb")
+  run_re = %r!\A\#  !
+  update = readme.sub(%r!(= Restart Example\n)(.*?)(?=^Run)!m) {
+    $1 + "\n" +
+    restarts[%r!^(require.*?)(?=^\#)!m].
+    gsub(%r!^!m, "  ")
+  }.sub(%r!^(Run:\n)(.*?)(?=^=)!m) {
+    $1 + "\n" +
+    restarts.lines.grep(run_re).map { |t| t.sub(run_re, "  ") }.join + "\n"
+  }
+  File.open(README, "w") { |f| f.print update }
+end
+
+######################################################################
 # clean
 
 task :clean => [:clobber, :clean_doc] do
@@ -73,12 +92,12 @@ Rake::GemPackageTask.new(GEMSPEC) { |t|
 # doc
 
 task :doc => :clean_doc do 
-  files = %w[README lib/cond.rb]
+  files = %W[#{README} lib/cond.rb]
 
   options = [
     "-o", DOC_DIR,
     "--title", "#{GEMSPEC.name}: #{GEMSPEC.summary}",
-    "--main", "README"
+    "--main", README
   ]
 
   RDoc::RDoc.new.document(files + options)

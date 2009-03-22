@@ -4,7 +4,7 @@
 == Description
 
 A supplemental, backward-compatible error-handling system for
-resolving errors before the stack unwinds.
+resolving errors without unwinding the stack.
 
 == Synopsis
 
@@ -39,7 +39,10 @@ or
 
 == Overview
 
-Cond allows errors to be handled near the place where they occur.
+Cond allows errors to be handled near the place where they occur,
+before the stack unwinds.  It offers several advantages over
+exceptions while peacefully coexisting with the standard exception
+behavior.
 
 The system is divided into two parts: _restarts_ and _handlers_.  When
 +raise+ is called and there is a matching handler for the error, the
@@ -76,10 +79,10 @@ available restarts.
                                       +<-- restart_z
 
 A handler may find a way to negate the problem and, by invoking a
-restart, allow execution to continue from a place in the proximity of
-where +raise+ was called.  Or a handler may choose to allow the
-exception to propagate in the usual unwinding fashion, as if the
-handler was never called.
+restart, allow execution to continue from a place proximal to where
++raise+ was called.  Or a handler may choose to allow the exception to
+propagate in the usual unwinding fashion, as if the handler was never
+called.
 
 == Background
 
@@ -91,8 +94,9 @@ though the whole talk is worthwhile.
 
 http://video.google.com/videoplay?docid=448441135356213813#46m07s
 
-When he says "signal," think of Cond's special +raise+.  The example
-he shows is taken from his book on Lisp,
+When he says "signal," think of Cond's (backward-compatible)
+redefinition of +raise+.  The example he shows is taken from his book
+on Lisp,
 
 http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 
@@ -119,10 +123,108 @@ See readmes/seibel_pcl.rb for a Ruby translation.
     puts result  # => 42
   end
 
-This demonstrates +leave+, which acts like +return+ for the current
-+handling+ or +restartable+ block.  Its counterpart is +again+, which
-acts like +redo+ for the current +handling+ or +restartable+ block.
-These blocks may be nested arbitrarily.
++leave+ acts like +return+ for the current +handling+ or +restartable+
+block.  There is also +again+, which acts like +redo+ for the current
++handling+ or +restartable+ block.  These blocks may be nested
+arbitrarily.
+
++leave+ and +again+ are for convenience only.  They remove the need
+for repetitive catch blocks and prevent symbol collisions for nested
+catch labels.
+
+A default handler is provided which runs a simple choose-a-restart
+input loop when +raise+ is called, as the next example demonstrates.
+
+== Restart Example
+
+  require 'pp'
+  require 'cond'
+  include Cond
+  
+  class RestartableFetchError < RuntimeError
+    def initialize(key, hash)
+      super()
+      @key, @hash = key, hash
+    end
+    def message
+      "#{self} error getting #{@key.inspect} from:\n#{@hash.pretty_inspect}"
+    end
+  end
+  
+  def read_new_value(what)
+    print("Enter a new #{what}: ")
+    eval($stdin.readline.chomp)
+  end
+  
+  def restartable_fetch(hash, key, default = nil)
+    restartable do
+      restart :continue, "Return not having found the value." do
+        return default
+      end
+      restart :try_again, "Try getting the key from the hash again." do
+        again
+      end
+      restart :use_new_key, "Use a new key." do
+        key = read_new_value("key")
+        again
+      end
+      restart :use_new_hash, "Use a new hash." do
+        hash = read_new_value("hash")
+        again
+      end
+      hash.fetch(key) {
+        raise RestartableFetchError.new(key, hash)
+      }
+    end
+  end
+  
+  fruits_and_vegetables = Hash[*%w[
+     apple fruit
+     orange fruit
+     lettuce vegetable
+     tomato depends_on_who_you_ask
+  ]]
+  
+  Cond.with_default_handlers {
+    puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
+  }
+  
+Run:
+
+  % ruby readmes/restarts.rb
+  #<RestartableFetchError: RestartableFetchError>
+  readmes/restarts.rb:54:in `<main>'
+  RestartableFetchError error getting "mango" from:
+  {"apple"=>"fruit",
+   "orange"=>"fruit",
+   "lettuce"=>"vegetable",
+   "tomato"=>"depends_on_who_you_ask"}
+  
+    0: Return not having found the value. (:continue)
+    1: Try getting the key from the hash again. (:try_again)
+    2: Use a new hash. (:use_new_hash)
+    3: Use a new key. (:use_new_key)
+  Choose number: 2
+  Enter a new hash: { "mango" => "mangoish fruit" }
+  value: "mangoish fruit"
+  
+  
+  % ruby readmes/restarts.rb
+  #<RestartableFetchError: RestartableFetchError>
+  readmes/restarts.rb:54:in `<main>'
+  RestartableFetchError error getting "mango" from:
+  {"apple"=>"fruit",
+   "orange"=>"fruit",
+   "lettuce"=>"vegetable",
+   "tomato"=>"depends_on_who_you_ask"}
+  
+    0: Return not having found the value. (:continue)
+    1: Try getting the key from the hash again. (:try_again)
+    2: Use a new hash. (:use_new_hash)
+    3: Use a new key. (:use_new_key)
+  Choose number: 3
+  Enter a new key: "apple"
+  value: "fruit"
 
 == Technical Notes
 
@@ -139,15 +241,15 @@ of +Cond+ are <tt>module_function</tt>s and are thus callable via e.g.
 order to improve the hygiene of <tt>include Cond</tt> and encourage
 its use.
 
-Cond does not silently modify any of the standard classes.
+Except for the redefinition +raise+, Cond does not silently modify any
+of the standard classes
 
-The implementation is small and simple: it basically consists of two
-per-thread stacks of hashes (handlers and restarts).  Except for
-+raise+, 
-
-The syntax shown in the above examples is a thin layer concealing the
-underlying hashes.  It is equivalent to the following raw form.  You
-are free to use either form according to preference or circumstance.
+The essential implementation is small and simple: it consists of two
+per-thread stacks of hashes (handlers and restarts) with merge-push
+and pop operations.  The syntax shown in the above examples is a thin
+layer concealing the underlying hashes.  It is equivalent to the
+following raw form.  You are free to use either form according to
+preference or circumstance.
 
 === Raw Form
 

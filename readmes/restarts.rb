@@ -1,11 +1,12 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
-require 'pp'
-require 'cond'
-include Cond
 
 #
 # http://c2.com/cgi/wiki?LispRestartExample
 #
+
+require 'pp'
+require 'cond'
+include Cond
 
 class RestartableFetchError < RuntimeError
   def initialize(key, hash)
@@ -55,6 +56,7 @@ Cond.with_default_handlers {
   puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
 }
 
+#
 #  % ruby readmes/restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
 #  readmes/restarts.rb:54:in `<main>'
@@ -89,3 +91,4 @@ Cond.with_default_handlers {
 #  Choose number: 3
 #  Enter a new key: "apple"
 #  value: "fruit"
+#

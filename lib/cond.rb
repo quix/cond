@@ -5,11 +5,11 @@ require 'cond/cond_private/defaults'
 
 # 
 # A supplemental, backward-compatible error-handling system for
-# resolving errors before the stack unwinds.
+# resolving errors without unwinding the stack.
 # 
 module Cond
   module CondPrivate
-    class MessageProc < Proc  #:nodoc:
+    class MessageProc < Proc
       def initialize(message = "", &block)
         @message = message
       end
