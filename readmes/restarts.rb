@@ -9,13 +9,6 @@ require 'cond'
 include Cond
 
 class RestartableFetchError < RuntimeError
-  def initialize(key, hash)
-    super()
-    @key, @hash = key, hash
-  end
-  def message
-    "#{self} error getting #{@key.inspect} from:\n#{@hash.pretty_inspect}"
-  end
 end
 
 def read_new_value(what)
@@ -40,7 +33,8 @@ def restartable_fetch(hash, key, default = nil)
       again
     end
     hash.fetch(key) {
-      raise RestartableFetchError.new(key, hash)
+      raise RestartableFetchError,
+        "Error getting #{key.inspect} from:\n#{hash.pretty_inspect}"
     }
   end
 end
@@ -56,29 +50,9 @@ Cond.with_default_handlers {
   puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
 }
 
-#
 #  % ruby readmes/restarts.rb
-#  #<RestartableFetchError: RestartableFetchError>
-#  readmes/restarts.rb:54:in `<main>'
-#  RestartableFetchError error getting "mango" from:
-#  {"apple"=>"fruit",
-#   "orange"=>"fruit",
-#   "lettuce"=>"vegetable",
-#   "tomato"=>"depends_on_who_you_ask"}
-#  
-#    0: Return not having found the value. (:continue)
-#    1: Try getting the key from the hash again. (:try_again)
-#    2: Use a new hash. (:use_new_hash)
-#    3: Use a new key. (:use_new_key)
-#  Choose number: 2
-#  Enter a new hash: { "mango" => "mangoish fruit" }
-#  value: "mangoish fruit"
-#  
-#  
-#  % ruby readmes/restarts.rb
-#  #<RestartableFetchError: RestartableFetchError>
-#  readmes/restarts.rb:54:in `<main>'
-#  RestartableFetchError error getting "mango" from:
+#  readmes/restarts.rb:49:in `<main>'
+#  Error getting "mango" from:
 #  {"apple"=>"fruit",
 #   "orange"=>"fruit",
 #   "lettuce"=>"vegetable",
@@ -91,4 +65,20 @@ Cond.with_default_handlers {
 #  Choose number: 3
 #  Enter a new key: "apple"
 #  value: "fruit"
-#
+#  
+#  % ruby readmes/restarts.rb
+#  readmes/restarts.rb:49:in `<main>'
+#  Error getting "mango" from:
+#  {"apple"=>"fruit",
+#   "orange"=>"fruit",
+#   "lettuce"=>"vegetable",
+#   "tomato"=>"depends_on_who_you_ask"}
+#  
+#    0: Return not having found the value. (:continue)
+#    1: Try getting the key from the hash again. (:try_again)
+#    2: Use a new hash. (:use_new_hash)
+#    3: Use a new key. (:use_new_key)
+#  Choose number: 2
+#  Enter a new hash: { "mango" => "mangoish fruit" }
+#  value: "mangoish fruit"
+

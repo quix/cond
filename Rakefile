@@ -61,7 +61,7 @@ task :readme do
     $1 + "\n" +
     restarts[%r!^(require.*?)(?=^\#)!m].
     gsub(%r!^!m, "  ")
-  }.sub(%r!^(Run:\n)(.*?)(?=^=)!m) {
+  }.sub(%r!^(Run:\n)(.*?)(?=^\S)!m) {
     $1 + "\n" +
     restarts.lines.grep(run_re).map { |t| t.sub(run_re, "  ") }.join + "\n"
   }

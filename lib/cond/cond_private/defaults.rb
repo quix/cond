@@ -19,7 +19,7 @@ module Cond
       end
 
       def handler(exception)
-        stream_out.puts exception.inspect, exception.backtrace.last
+        stream_out.puts exception.backtrace.last
 
         if exception.respond_to? :message
           stream_out.puts exception.message, ""
