@@ -1,6 +1,5 @@
 
 require 'cond/cond_inner/thread_local'
-require 'cond/cond_inner/stack'
 require 'cond/cond_inner/loop_with'
 require 'cond/cond_inner/symbol_generator'
 require 'cond/cond_inner/defaults'
@@ -87,7 +86,7 @@ module Cond
     #
     def with_handlers(handlers)
       # note: leave unfactored due to notable yield vs &block performance
-      handlers_stack.push(handlers_stack.top.merge(handlers))
+      handlers_stack.push(handlers_stack.last.merge(handlers))
       begin
         yield
       ensure
@@ -104,7 +103,7 @@ module Cond
     #
     def with_restarts(restarts)
       # note: leave unfactored due to notable yield vs &block performance
-      restarts_stack.push(restarts_stack.top.merge(restarts))
+      restarts_stack.push(restarts_stack.last.merge(restarts))
       begin
         yield
       ensure
@@ -158,7 +157,7 @@ module Cond
     # The current set of restarts which have been registered.
     #
     def available_restarts
-      restarts_stack.top
+      restarts_stack.last
     end
       
     #
@@ -172,7 +171,7 @@ module Cond
     # Find the closest-matching handler for the given Exception.
     #
     def find_handler(target)
-      find_handler_from(handlers_stack.top, target)
+      find_handler_from(handlers_stack.last, target)
     end
 
     def find_handler_from(handlers, target)  #:nodoc:
@@ -255,8 +254,8 @@ module Cond
     ######################################################################
     # data -- all data is per-thread and fetched from the singleton class
     
-    stack_0  = lambda { CondInner::Stack.new }
-    stack_1  = lambda { CondInner::Stack.new.push(Hash.new) }
+    stack_0  = lambda { Array.new }
+    stack_1  = lambda { Array.new.push(Hash.new) }
     defaults = lambda { CondInner::Defaults.new }
     {
       :code_section_stack => stack_0,
@@ -330,7 +329,7 @@ module Cond
       end
       
       def restart(sym, message, &block)
-        Cond.restarts_stack.top[sym] = Restart.new(message, &block)
+        Cond.restarts_stack.last[sym] = Restart.new(message, &block)
       end
     end
 
@@ -340,7 +339,7 @@ module Cond
       end
       
       def handle(sym, message, &block)
-        Cond.handlers_stack.top[sym] = Handler.new(message, &block)
+        Cond.handlers_stack.last[sym] = Handler.new(message, &block)
       end
     end
   end
@@ -372,11 +371,11 @@ module Cond
   # The exception instance is passed to the block.
   #
   def handle(arg, message = "", &block)
-    top = Cond.code_section_stack.top
-    unless top.is_a? CondInner::HandlingSection
+    last = Cond.code_section_stack.last
+    unless last.is_a? CondInner::HandlingSection
       cond_original_raise("`handle' called outside of `handling' block")
     end
-    top.handle(arg, message, &block)
+    last.handle(arg, message, &block)
   end
 
   #
@@ -386,11 +385,11 @@ module Cond
   # arguments which are in turn passed to &block.
   #
   def restart(arg, message = "", &block)
-    top = Cond.code_section_stack.top
-    unless top.is_a? CondInner::RestartableSection
+    last = Cond.code_section_stack.last
+    unless last.is_a? CondInner::RestartableSection
       cond_original_raise("`restart' called outside of `restartable' block")
     end
-    top.restart(arg, message, &block)
+    last.restart(arg, message, &block)
   end
 
   #
@@ -402,7 +401,7 @@ module Cond
   # returns only that argument (not an array).
   #
   def leave(*args)
-    Cond.code_section_stack.top.leave(*args)
+    Cond.code_section_stack.last.leave(*args)
   end
 
   #
@@ -411,7 +410,7 @@ module Cond
   # Optionally pass arguments which are given to the block.
   #
   def again(*args)
-    Cond.code_section_stack.top.again(*args)
+    Cond.code_section_stack.last.again(*args)
   end
 
   #
@@ -432,13 +431,13 @@ module Kernel
   remove_method :raise
   def raise(*args)
     if Cond.handlers_stack.empty?
-      # normal raise
+      # not using Cond
       cond_original_raise(*args)
     else
-      top = Cond.exception_stack.top
+      last_exception = Cond.exception_stack.last
       exception = (
-        if top and args.empty?
-          top
+        if last_exception and args.empty?
+          last_exception
         else
           begin
             cond_original_raise(*args)
@@ -447,11 +446,11 @@ module Kernel
           end
         end
       )
-      if top
-        # inside handler
+      if last_exception
+        # inside a handler
         handler = loop {
           Cond.reraise_count += 1
-          handlers = Cond.handlers_stack.at(-1 - Cond.reraise_count)
+          handlers = Cond.handlers_stack[-1 - Cond.reraise_count]
           if handlers.nil?
             break nil
           end
