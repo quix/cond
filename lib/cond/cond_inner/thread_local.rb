@@ -4,19 +4,37 @@ require 'cond/cond_inner/symbol_generator'
 
 module Cond
   module CondInner
+    #
+    # Thread-local variable.
+    #
     class ThreadLocal
       include SymbolGenerator
 
       #
-      # The block should create a new object (if not, the returned
-      # object will be shared across threads, which rather defeats the
-      # purpose).
+      # If +value+ is called before +value=+ then the result of
+      # &default is used.
+      #
+      # &default normally creates a new object, otherwise the returned
+      # object will be shared across threads.
       #
       def initialize(prefix = nil, &default)
         @name = gensym(prefix)
         @accessed = gensym(prefix)
         @default = default
         SymbolGenerator.track(self, [@name, @accessed])
+      end
+
+      #
+      # Reset to just-initialized state for all threads.
+      #
+      def clear(&default)
+        @default = default
+        Thread.exclusive {
+          Thread.list.each { |thread|
+            thread[@accessed] = nil
+            thread[@name] = nil
+          }
+        }
       end
       
       def value
@@ -52,10 +70,10 @@ module Cond
             names.each { |name|
               # TODO: jettison 1.8.6, remove eval and use |&block|
               eval %{
-              def #{name}(*args, &block)
-                value.send(:'#{name}', *args, &block)
-              end
-            }
+                def #{name}(*args, &block)
+                  value.send(:'#{name}', *args, &block)
+                end
+              }
             }
           }
         end
