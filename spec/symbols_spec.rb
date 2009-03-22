@@ -1,22 +1,33 @@
 require File.dirname(__FILE__) + "/common"
 
 #
-# By garbage colleting every cycle, we can demonstrate symbol
-# recycling is working if the symbol count levels off.
+# Try to demonstrate symbol recycling by calling GC.start on each pass
+# through a symbol-generating loop.
 #
-# For MRI 1.8 @count is between 20 and 30.  For MRI 1.9 it is exactly
-# 20.  For jruby it forever increases, which presumably is a bug.
+# I have not yet seen jruby call the finalizers required for symbol
+# recycling.
 #
 
-unless defined?(RUBY_ENGINE) and RUBY_ENGINE == "jruby"
-  describe "generated symbols" do
-    it "should be recycled" do
-      200.times { |n|
-        Cond::CondPrivate::CodeSection.new(:foo)
-        GC.start
-      }
-      sym = Cond::CondPrivate::SymbolGenerator.gensym
-      sym.to_s.should match(%r!\A\|[a-z]\Z!)
-    end
+def symbols_spec(&block)
+  if defined?(RUBY_ENGINE) and RUBY_ENGINE == "jruby"
+    xit "jruby failing #{File.basename(__FILE__)}", &block
+  else
+    it "should be recycled", &block
+  end
+end
+
+describe "generated symbols" do
+  symbols_spec do
+    histogram = Hash.new { |hash, key| hash[key] = 0 }
+
+    300.times { |n|
+      obj = Cond::CondPrivate::CodeSection.new(:foo)
+      leave, again = obj.instance_eval { [@leave, @again] }
+      histogram[leave] += 1
+      histogram[again] += 1
+      GC.start
+    }
+      
+    histogram.values.any? { |t| t > 1 }.should == true
   end
 end
