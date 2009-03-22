@@ -28,8 +28,8 @@ module Cond
       # Reset to just-initialized state for all threads.
       #
       def clear(&default)
-        @default = default
         Thread.exclusive {
+          @default = default
           Thread.list.each { |thread|
             thread[@accessed] = nil
             thread[@name] = nil
