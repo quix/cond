@@ -38,7 +38,7 @@ def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = handling do
-        on MalformedLogEntryError do
+        handle MalformedLogEntryError do
         end
         parse_log_entry(text)
       end
@@ -61,7 +61,7 @@ def parse_log_file(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = restartable do
-        on :skip_log_entry do
+        restart :skip_log_entry do
           leave
         end
         parse_log_entry(text)
@@ -86,7 +86,7 @@ Cond.debugger {
 # 
 def log_analyzer
   handling do
-    on MalformedLogEntryError do
+    handle MalformedLogEntryError do
       invoke_restart :skip_log_entry
     end
     find_all_logs.each { |log|

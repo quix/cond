@@ -42,7 +42,7 @@ describe Cond do
 
       f = lambda {
         restartable do
-          on :example_restart do |*args|
+          restart :example_restart do |*args|
             memo.push :restart
             memo.push args
           end
@@ -54,7 +54,7 @@ describe Cond do
     
       memo.push :first
       handling do
-        on ExampleError do
+        handle ExampleError do
           memo.push :handler
           invoke_restart :example_restart, :x, :y
         end

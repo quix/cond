@@ -267,7 +267,8 @@ module Cond
     }
 
     #
-    # Contains the default handlers and restarts.  To replace it, call
+    # Cond.defaults contains the default handlers and restarts.  To
+    # replace it, call
     #
     #   Cond.defaults.clear(&block)
     #
@@ -322,7 +323,7 @@ module Cond
         super(:with_restarts, &block)
       end
       
-      def on(sym, message, &block)
+      def restart(sym, message, &block)
         Cond.restarts_stack.top[sym] = Restart.new(message, &block)
       end
     end
@@ -332,7 +333,7 @@ module Cond
         super(:with_handlers, &block)
       end
       
-      def on(sym, message, &block)
+      def handle(sym, message, &block)
         Cond.handlers_stack.top[sym] = Handler.new(message, &block)
       end
     end
@@ -360,17 +361,30 @@ module Cond
   end
   
   #
-  # Define a handler or a restart.
+  # Define a handler.
   #
-  # When inside a handling block, define a handler.  The exception
-  # instance is passed to the block.
+  # The exception instance is passed to the block.
   #
-  # When inside a restartable block, define a restart.  When a
-  # handler calls invoke_restart, it may pass additional arguments
-  # which are in turn passed to &block.
+  def handle(arg, message = "", &block)
+    top = Cond.code_section_stack.top
+    unless top.is_a? CondInner::HandlingSection
+      cond_original_raise("`handle' called outside of `handling' block")
+    end
+    top.handle(arg, message, &block)
+  end
+
   #
-  def on(arg, message = "", &block)
-    Cond.code_section_stack.top.on(arg, message, &block)
+  # Define a restart.
+  #
+  # When a handler calls invoke_restart, it may pass additional
+  # arguments which are in turn passed to &block.
+  #
+  def restart(arg, message = "", &block)
+    top = Cond.code_section_stack.top
+    unless top.is_a? CondInner::RestartableSection
+      cond_original_raise("`restart' called outside of `restartable' block")
+    end
+    top.restart(arg, message, &block)
   end
 
   #

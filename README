@@ -13,7 +13,7 @@ the stack.
   
   def divide(x, y)
     restartable do
-      on :return_this_instead do |value|
+      restart :return_this_instead do |value|
         return value
       end
       raise ZeroDivisionError if y == 0
@@ -22,7 +22,7 @@ the stack.
   end
   
   handling do
-    on ZeroDivisionError do |exception|
+    handle ZeroDivisionError do |exception|
       invoke_restart :return_this_instead, 42
     end
     puts divide(10, 2)  # => 5

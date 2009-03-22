@@ -17,11 +17,11 @@ end
 
 def calc(x, y, epsilon)
   restartable do
-    on :change_epsilon do |new_epsilon|
+    restart :change_epsilon do |new_epsilon|
       epsilon = new_epsilon
       again
     end
-    on :give_up do
+    restart :give_up do
       leave
     end
     # ...
@@ -41,7 +41,7 @@ describe "A calculation which can raise a divergent error," do
         @memo = []
         @result = nil
         epsilon = 0.0005
-        on DivergedError do
+        handle DivergedError do
           epsilon += 0.001
           @memo.push :increase
           invoke_restart :change_epsilon, epsilon
@@ -65,7 +65,7 @@ describe "A calculation which can raise a divergent error," do
         @result = 9999
         @memo = []
         epsilon = 1e-10
-        on DivergedError do
+        handle DivergedError do
           @memo.push :give_up
           invoke_restart :give_up
         end

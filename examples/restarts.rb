@@ -28,17 +28,17 @@ end
 
 def restartable_fetch(hash, key, default = nil)
   restartable do
-    on :continue, "Return not having found the value." do
+    restart :continue, "Return not having found the value." do
       return
     end
-    on :try_again, "Try getting the key from the hash again." do
+    restart :try_again, "Try getting the key from the hash again." do
       again
     end
-    on :use_new_key, "Use a new key." do
+    restart :use_new_key, "Use a new key." do
       key = read_new_value("key")
       again
     end
-    on :use_new_hash, "Use a new hash." do
+    restart :use_new_hash, "Use a new hash." do
       hash = read_new_value("hash")
       again
     end
