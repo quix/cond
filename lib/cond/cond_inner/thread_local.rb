@@ -64,6 +64,20 @@ module Cond
             }
           }
         end
+        
+        def reader_module(name, subclass = self, &block)
+          accessor_module(name, subclass, &block).instance_eval {
+            remove_method "#{name}="
+            self
+          }
+        end
+
+        def writer_module(name, subclass = self, &block)
+          accessor_module(name, subclass, &block).instance_eval {
+            remove_method "#{name}"
+            self
+          }
+        end
 
         def wrap_methods(names)
           Class.new(ThreadLocal) {

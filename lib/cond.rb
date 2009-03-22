@@ -261,7 +261,7 @@ module Cond
       :restarts_stack     => stack_1,
       :defaults           => defaults,
     }.each_pair { |name, create|
-      include CondInner::ThreadLocal.accessor_module(name) {
+      include CondInner::ThreadLocal.reader_module(name) {
         create.call
       }
     }
