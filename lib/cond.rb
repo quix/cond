@@ -438,7 +438,7 @@ module Kernel
   alias_method :cond_original_raise, :raise
   remove_method :raise
   def raise(*args)
-    if Cond.handlers_stack.empty?
+    if Cond.handlers_stack.last.empty?
       # not using Cond
       cond_original_raise(*args)
     else
