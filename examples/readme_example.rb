@@ -9,7 +9,6 @@ lib = root + "lib"
 describe file do
   ["Synopsis",
    "Raw Form",
-   "Another Example",
    "Synopsis 2.0",
   ].each { |section|
     it "#{section} should run as claimed" do

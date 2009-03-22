@@ -110,52 +110,6 @@ acts like +redo+ for the current +handling+ or +restartable+ block.
 
 +handling+ and +restartable+ blocks may be nested arbitrarily.
 
-== Another Example
-
-  class FredError < RuntimeError ; end
-  class WilmaError < RuntimeError ; end
-  
-  handling do
-    # We are able to handle Fred errors immediately; no need to unwind
-    # the stack.
-    handle FredError do
-      # ...
-      puts "Handled a FredError. Continuing..."
-    end
-    
-    # We want to be informed of Wilma errors, but we can't handle them.
-    handle WilmaError do
-      puts "Got a WilmaError. Re-raising..."
-      raise
-    end
-  
-    raise FredError
-    # => Handled a FredError. Continuing...
-      
-    handling do
-      # We want to ignore Wilma errors here.
-      handle WilmaError do
-        puts "Ignored WilmaError."
-      end
-      
-      raise WilmaError
-      # => Ignored WilmaError.
-        
-      # the FredError handler is still active
-      raise FredError
-      # => Handled a FredError. Continuing...
-    end
-  
-    # The previous WilmaError handler has been restored.
-    begin
-      raise WilmaError, "should not be ignored"
-    rescue WilmaError => e
-      puts "Rescued: #{e.inspect}"
-    end
-    # => Got a WilmaError. Re-raising...
-    # => Rescued: #<WilmaError: should not be ignored>
-  end
-
 == Technical Notes
 
 +Cond+ has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
