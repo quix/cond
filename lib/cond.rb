@@ -172,8 +172,12 @@ module Cond
     # Find the closest-matching handler for the given Exception.
     #
     def find_handler(target)
-      handlers_stack.top.fetch(target) {
-        found = handlers_stack.top.inject(Array.new) { |acc, (klass, func)|
+      find_handler_from(handlers_stack.top, target)
+    end
+
+    def find_handler_from(handlers, target)  #:nodoc:
+      handlers.fetch(target) {
+        found = handlers.inject(Array.new) { |acc, (klass, func)|
           index = target.ancestors.index(klass)
           if index
             acc << [index, func]
@@ -265,6 +269,8 @@ module Cond
         create.call
       }
     }
+
+    include CondInner::ThreadLocal.accessor_module(:reraise_count) { 0 }
 
     #
     # Cond.defaults contains the default handlers and restarts.  To
@@ -425,30 +431,55 @@ module Kernel
   alias_method :cond_original_raise, :raise
   remove_method :raise
   def raise(*args)
-    if Cond.exception_stack.top
-      # we are inside a handler
-      if args.empty?
-        cond_original_raise(Cond.exception_stack.top)
-      else
-        cond_original_raise(*args)
-      end
+    if Cond.handlers_stack.empty?
+      # normal raise
+      cond_original_raise(*args)
     else
-      exception = nil
-      # not inside a handler
-      begin
-        cond_original_raise(*args)
-      rescue Exception => exception
-      end
-      handler = Cond.find_handler(exception.class)
-      if handler
-        Cond.exception_stack.push(exception)
-        begin
+      top = Cond.exception_stack.top
+      exception = (
+        if top and args.empty?
+          top
+        else
+          begin
+            cond_original_raise(*args)
+          rescue Exception => e
+            e
+          end
+        end
+      )
+      if top
+        # inside handler
+        handler = loop {
+          Cond.reraise_count += 1
+          handlers = Cond.handlers_stack.at(-1 - Cond.reraise_count)
+          if handlers.nil?
+            break nil
+          end
+          found = Cond.find_handler_from(handlers, exception.class)
+          if found
+            break found
+          end
+        }
+        if handler
           handler.call(exception)
-        ensure
-          Cond.exception_stack.pop
+        else
+          Cond.reraise_count = 0
+          cond_original_raise(exception)
         end
       else
-        cond_original_raise(exception)
+        # not inside a handler
+        Cond.reraise_count = 0
+        handler = Cond.find_handler(exception.class)
+        if handler
+          Cond.exception_stack.push(exception)
+          begin
+            handler.call(exception)
+          ensure
+            Cond.exception_stack.pop
+          end
+        else
+          cond_original_raise(exception)
+        end
       end
     end
   end

@@ -6,10 +6,6 @@ module Cond
         @array = Array.new
       end
 
-      def empty?
-        @array.empty?
-      end
-      
       def top
         @array.last
       end
@@ -19,9 +15,15 @@ module Cond
         self
       end
 
-      def pop
-        @array.pop
+      def at(index)
+        @array.at(index)
       end
+
+      [:pop, :empty?, :size].each { |name|
+        define_method(name) {
+          @array.send(name)
+        }
+      }
     end
   end
 end
