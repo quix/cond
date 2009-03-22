@@ -4,12 +4,10 @@ require 'cond/cond_private/symbol_generator'
 require 'cond/cond_private/defaults'
 
 # 
-# Handle exceptions without unwinding the stack.  See README.
+# A supplemental, backward-compatible error-handling system for
+# resolving errors before the stack unwinds.
 # 
 module Cond
-  ######################################################################
-  # Restart and Handler 
-
   module CondPrivate
     class MessageProc < Proc  #:nodoc:
       def initialize(message = "", &block)
@@ -112,7 +110,7 @@ module Cond
     #
     # Find the closest-matching handler for the given Exception.
     #
-    def find_handler(target)
+    def find_handler(target)  #:nodoc:
       find_handler_from(handlers_stack.last, target)
     end
 
@@ -140,7 +138,7 @@ module Cond
       end
     end
 
-    def check_context(keyword)
+    def check_context(keyword)  #:nodoc:
       section = Cond.code_section_stack.last
       case keyword
       when :restart
@@ -333,8 +331,8 @@ module Cond
   module_function
 
   #
-  # Begin a handling block.  Inside this block, handlers get called
-  # during when +raise+ gets called.
+  # Begin a handling block.  Inside this block, a matching handler
+  # gets called when +raise+ gets called.
   #
   def handling(&block)
     Cond.run_code_section(CondPrivate::HandlingSection, &block)

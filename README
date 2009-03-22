@@ -3,8 +3,8 @@
 
 == Description
 
-Intercept exceptions being raised and resolve errors without unwinding
-the stack.
+A supplemental, backward-compatible error-handling system for
+resolving errors before the stack unwinds.
 
 == Synopsis
 
@@ -22,7 +22,7 @@ the stack.
   end
   
   handling do
-    handle ZeroDivisionError do |exception|
+    handle ZeroDivisionError do
       invoke_restart :return_this_instead, 42
     end
     puts divide(10, 2)  # => 5
@@ -34,18 +34,15 @@ the stack.
 == Install
 
   % gem install cond
-
 or
-
   % ruby install.rb [--uninstall]
 
 == Overview
 
-+Cond+ allows errors to be resolved at the place where they occur
-while preserving the state of the stack.
+Cond allows errors to be handled near the place where they occur.
 
 The system is divided into two parts: _restarts_ and _handlers_.  When
-+raise+ is called and there is a related handler for the error, the
++raise+ is called and there is a matching handler for the error, the
 normal mechanism of unwinding the stack is suspended while the handler
 is called instead.  At this time, the handler may invoke one of the
 available restarts.
@@ -84,6 +81,23 @@ where +raise+ was called.  Or a handler may choose to allow the
 exception to propagate in the usual unwinding fashion, as if the
 handler was never called.
 
+== Background
+
+Cond is stolen from the Common Lisp condition system.
+
+Peter Seibel discusses the advantages of handlers and restarts in the
+following video.  I have fast-forwarded to the most relevant part,
+though the whole talk is worthwhile.
+
+http://video.google.com/videoplay?docid=448441135356213813#46m07s
+
+When he says "signal," think of Cond's special +raise+.  The example
+he shows is taken from his book on Lisp,
+
+http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
+
+See readmes/seibel_pcl.rb for a Ruby translation.
+
 == Synopsis 2.0
   
   x, y = 7, 0
@@ -108,12 +122,11 @@ handler was never called.
 This demonstrates +leave+, which acts like +return+ for the current
 +handling+ or +restartable+ block.  Its counterpart is +again+, which
 acts like +redo+ for the current +handling+ or +restartable+ block.
-
-+handling+ and +restartable+ blocks may be nested arbitrarily.
+These blocks may be nested arbitrarily.
 
 == Technical Notes
 
-+Cond+ has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
+Cond has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
 
 Each thread keeps its own list of handlers, restarts, and other data.
 All operations are fully thread-safe.
@@ -126,14 +139,11 @@ of +Cond+ are <tt>module_function</tt>s and are thus callable via e.g.
 order to improve the hygiene of <tt>include Cond</tt> and encourage
 its use.
 
-Except for the (backward-compatible) redefinition of +Kernel#raise+,
-+Cond+ does not silently modify any of the standard classes.
-
-=== Implementation
+Cond does not silently modify any of the standard classes.
 
 The implementation is small and simple: it basically consists of two
-per-thread stacks of hashes (handlers and restarts) and a redefinition
-of +raise+.
+per-thread stacks of hashes (handlers and restarts).  Except for
++raise+, 
 
 The syntax shown in the above examples is a thin layer concealing the
 underlying hashes.  It is equivalent to the following raw form.  You
@@ -189,23 +199,8 @@ Once this has been called, the line
 
 is unnecessary.
 
-It is possible remove this limitation by modifying in the Ruby
+It is possible remove this limitation by modifying the Ruby
 interpreter to dynamically look up Kernel#raise.
-
-=== Further
-
-Peter Seibel discusses the motivation and advantages of handlers and
-restarts in this video (I have fast-forwarded to the most relevant
-part, though the whole talk is worthwhile),
-
-http://video.google.com/videoplay?docid=448441135356213813#46m07s
-
-When he says "signal," think of Cond's special "raise".  He uses an
-example from his book,
-
-http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
-
-which has been translated to Ruby in readmes/seibel_pcl.rb.
 
 == Links
 
@@ -216,7 +211,7 @@ which has been translated to Ruby in readmes/seibel_pcl.rb.
 
 == Author
 
-* James M. Lawrence <quixoticsycophant@gmail.com>
+* James M. Lawrence < quixoticsycophant@gmail.com >
 
 == License
 

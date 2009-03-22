@@ -4,6 +4,7 @@ require 'spec/rake/spectask'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 require 'rdoc/rdoc'
+require 'pathname'
 
 require 'fileutils'
 include FileUtils
@@ -45,11 +46,7 @@ end
 
 task :show_full_spec => :full_spec do
   args = SPEC_OUTPUT, "coverage/index.html"
-  if Config::CONFIG["host"] =~ %r!darwin!
-    sh("open", "/Applications/Firefox.app", *args)
-  else
-    sh("firefox", *args)
-  end
+  open_browser(*args)
 end
 
 ######################################################################
@@ -88,6 +85,21 @@ task :doc => :clean_doc do
 end
 
 task :rdoc => :doc
+
+task :show_doc => :doc do
+  open_browser("#{DOC_DIR}/index.html")
+end
+
+######################################################################
+# misc
+
+def open_browser(*files)
+  if Config::CONFIG["host"] =~ %r!darwin!
+    sh("open", "/Applications/Firefox.app", *files)
+  else
+    sh("firefox", *files)
+  end
+end
 
 ######################################################################
 # git
