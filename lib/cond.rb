@@ -4,8 +4,8 @@ require 'cond/cond_private/symbol_generator'
 require 'cond/cond_private/defaults'
 
 # 
-# A supplemental, backward-compatible error-handling system for
-# resolving errors without unwinding the stack.
+# A supplemental error-handling system for resolving errors without
+# unwinding the stack.
 # 
 module Cond
   module CondPrivate

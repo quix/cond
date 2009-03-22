@@ -3,8 +3,8 @@
 
 == Description
 
-A supplemental, backward-compatible error-handling system for
-resolving errors without unwinding the stack.
+A supplemental error-handling system for resolving errors without
+unwinding the stack.
 
 == Synopsis
 
@@ -75,7 +75,7 @@ available restarts.
              |                        |<-- restart_x      |
              ^                        |                   |
                                       |<-- restart_y <----+
-    (3) exception raised here ------> |
+   (3) raise called here here ------> |
                                       +<-- restart_z
 
 A handler may find a way to negate the problem and, by invoking a
@@ -83,6 +83,11 @@ restart, allow execution to continue from a place proximal to where
 +raise+ was called.  Or a handler may choose to allow the exception to
 propagate in the usual unwinding fashion, as if the handler was never
 called.
+
+Cond is 100% compatible with the built-in exception-handling system.
+We may imagine that Ruby had this handler/restart functionality from
+very the beginning, but everyone had forgotten to write restarts.  And
+since no restarts were available, no handlers were written.
 
 == Background
 
@@ -94,9 +99,7 @@ though the whole talk is worthwhile.
 
 http://video.google.com/videoplay?docid=448441135356213813#46m07s
 
-When he says "signal," think of Cond's (backward-compatible)
-redefinition of +raise+.  The example he shows is taken from his book
-on Lisp,
+The example he shows is taken from his book on Lisp,
 
 http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 
@@ -295,13 +298,13 @@ Once this has been called, the line
 is unnecessary.
 
 It is possible remove this limitation by modifying the Ruby
-interpreter to dynamically look up Kernel#raise.
+interpreter to call Kernel#raise dynamically.
 
 == Links
 
 * Documentation: http://cond.rubyforge.org
 * Rubyforge home: http://rubyforge.org/projects/cond/
-* Manual download: http://rubyforge.org/frs/?group_id=7916
+* Download: http://rubyforge.org/frs/?group_id=7916
 * Repository: http://github.com/quix/cond/tree/master
 
 == Author

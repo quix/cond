@@ -2,9 +2,9 @@
 Gem::Specification.new { |t|
   t.author = "James M. Lawrence"
   t.email = "quixoticsycophant@gmail.com"
-  t.summary = "A supplemental, backward-compatible error-handling system for " +
-    "resolving errors without unwinding the stack."
-
+  t.summary =
+    "A supplemental error-handling system for resolving errors without " +
+    "unwinding the stack."
   t.name = "cond"
   t.rubyforge_project = t.name
   t.homepage = "#{t.name}.rubyforge.org"
