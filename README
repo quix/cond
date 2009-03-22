@@ -3,8 +3,7 @@
 
 == Description
 
-A supplemental error-handling system for resolving errors without
-unwinding the stack.
+Resolve errors without unwinding the stack.
 
 == Synopsis
 
