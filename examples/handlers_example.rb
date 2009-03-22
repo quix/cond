@@ -1,8 +1,8 @@
-require File.dirname(__FILE__) + "/common"
+require File.dirname(__FILE__) + "/../spec/common"
 
 require 'quix/ruby'
 
-file = Pathname(__FILE__).dirname + ".." + "examples" + "handlers.rb"
+file = Pathname(__FILE__).dirname + ".." + "readmes" + "handlers.rb"
 
 describe file do
   it "should run as claimed" do

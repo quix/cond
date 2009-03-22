@@ -13,16 +13,15 @@ GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
 DOC_DIR = "documentation"
 
+SPEC_FILES = FileList['spec/*_spec.rb'] + FileList['examples/*_example.rb']
+
 ######################################################################
 # coverage
 
 Spec::Rake::SpecTask.new('cov') do |t|
-  t.spec_files = (
-    FileList['test/test_*.rb'] +
-    FileList['examples/handlers.rb']
-  )
+  t.spec_files = SPEC_FILES
   t.rcov = true
-  t.rcov_opts = ['--exclude', 'test', '--exclude', 'support']
+  t.rcov_opts = ['--exclude', 'spec', '--exclude', 'support']
 end
 
 task :rcov => :cov
@@ -30,7 +29,7 @@ task :rcov => :cov
 ######################################################################
 # default
 
-task :default => :test
+task :default => :spec
 
 ######################################################################
 # clean
@@ -43,10 +42,10 @@ task :clean_doc do
 end
 
 ######################################################################
-# test
+# spec
 
-task :test do
-  require 'test/all'
+task :spec do
+  require 'spec/all'
 end
 
 ######################################################################
