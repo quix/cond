@@ -13,10 +13,7 @@ module Cond
   # Restart and Handler 
 
   module CondInner
-    #
-    # Base class for Restart and Handler.
-    #
-    class MessageProc < Proc
+    class MessageProc < Proc  #:nodoc:
       def initialize(message = "", &block)
         @message = message
       end
@@ -121,7 +118,7 @@ module Cond
     #
     def with_default_handlers
       # note: leave unfactored due to notable yield vs &block performance
-      with_handlers(default_handlers) {
+      with_handlers(defaults.handlers) {
         yield
       }
     end
@@ -131,7 +128,7 @@ module Cond
     #
     def with_default_restarts
       # note: leave unfactored due to notable yield vs &block performance
-      with_restarts(default_restarts) {
+      with_restarts(defaults.restarts) {
         yield
       }
     end
@@ -254,22 +251,32 @@ module Cond
     ######################################################################
     # data -- all data is per-thread and fetched from the singleton class
     
-    stack_0  = lambda { |*| CondInner::Stack.new }
-    stack_1  = lambda { |*| CondInner::Stack.new.push(Hash.new) }
-    defaults = lambda { |name| CondInner::Defaults.send(name) }
+    stack_0  = lambda { CondInner::Stack.new }
+    stack_1  = lambda { CondInner::Stack.new.push(Hash.new) }
+    defaults = lambda { CondInner::Defaults.new }
     {
       :code_section_stack => stack_0,
       :exception_stack    => stack_0,
       :handlers_stack     => stack_1,
       :restarts_stack     => stack_1,
-      :stream             => defaults,
-      :default_handlers   => defaults,
-      :default_restarts   => defaults,
-    }.each_pair { |name, init|
+      :defaults           => defaults,
+    }.each_pair { |name, create|
       include CondInner::ThreadLocal.accessor_module(name) {
-        init.call(name)
+        create.call
       }
     }
+
+    #
+    # Contains the default handlers and restarts.  To replace it, call
+    #
+    #   Cond.defaults.clear(&block)
+    #
+    # where &block creates a new instance of your class which
+    # implements the methods 'handlers' and 'restarts'.
+    #
+    # Note that &block should return a brand new instance.  Otherwise
+    # the returned object will be shared across threads.
+    #
   end
 
   ######################################################################
