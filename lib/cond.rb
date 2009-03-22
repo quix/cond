@@ -6,7 +6,7 @@ require 'cond/cond_inner/symbol_generator'
 require 'cond/cond_inner/defaults'
 
 # 
-# Condition system for handling errors in Ruby.  See README.
+# Handle exceptions without unwinding the stack.  See README.
 # 
 module Cond
   ######################################################################
@@ -28,17 +28,17 @@ module Cond
   end
 
   #
-  # A restart.  Use of this is optional: you could just pass lambdas
-  # to with_restarts, but you'll miss the description string shown
-  # inside Cond#default_handler.
+  # A restart.  Use of this class is optional: you could pass lambdas
+  # to Cond.with_restarts, but you'll miss the description string
+  # shown inside Cond.default_handler.
   #
   class Restart < CondInner::MessageProc
   end
 
   #
-  # A handler.  Use of this is optional: you could just pass lambdas
-  # to with_handlers, but you'll miss the description string shown by
-  # whichever tools might use it (currently none).
+  # A handler.  Use of this class is optional: you could pass lambdas
+  # to Cond.with_handlers, but you'll miss the description string
+  # shown by whichever tools might use it (currently none).
   #
   class Handler < CondInner::MessageProc
   end
@@ -104,12 +104,6 @@ module Cond
     #
     # When the block exits, the previous set of restarts (if any) are
     # restored.
-    #
-    # Example:
-    #
-    #   Cond.with_restarts(:return_nil => lambda { return nil }) {
-    #     # ..
-    #   }
     #
     def with_restarts(restarts)
       # note: leave unfactored due to notable yield vs &block performance
@@ -194,7 +188,7 @@ module Cond
       }
     end
   
-    def run_code_section(klass, &block)
+    def run_code_section(klass, &block) #:nodoc:
       section = klass.new(&block)
       Cond.code_section_stack.push(section)
       begin
@@ -279,7 +273,6 @@ module Cond
   end
 
   ######################################################################
-  # code sections
   
   module CondInner
     class CodeSection  #:nodoc:
@@ -344,50 +337,49 @@ module Cond
   module_function
 
   #
-  # Begin a section of code in which exceptions may be handled without
-  # unwinding the stack.
+  # Begin a handling block.  Inside this block, exceptions may be
+  # handled without unwinding the stack.
   #
   def handling(&block)
     Cond.run_code_section(CondInner::HandlingSection, &block)
   end
 
   #
-  # Begin a restartable section of code.
+  # Begin a restartable block.  A handler may transfer control to one
+  # of the restarts in this block.
   #
   def restartable(&block)
     Cond.run_code_section(CondInner::RestartableSection, &block)
   end
   
   #
-  # While inside a +restartable+ section, define a restart.  When a
-  # handler calls invoke_restart, it may pass additional arguments
-  # which arrive in the restart's block parameters.
+  # Define a handler or a restart.
   #
-  # While inside a +handling+ section, define a handler.  The
-  # exception instance is passed to the block.
+  # When inside a handling block, define a handler.  The exception
+  # instance is passed to the block.
+  #
+  # When inside a restartable block, define a restart.  When a
+  # handler calls invoke_restart, it may pass additional arguments
+  # which are in turn passed to &block.
   #
   def on(arg, message = "", &block)
     Cond.code_section_stack.top.on(arg, message, &block)
   end
 
   #
-  # Leave the current +restartable+ or +handling+ section, optionally
+  # Leave the current handling or restartable block, optionally
   # providing a value for the block.
   #
-  # Optionally pass arguments which will be the value returned by the
-  # +restartable+ or +handling+ block.
-  #
-  # It has the semantics of +return+.  When given multiple arguments,
-  # it returns an array.  When given one argument, it returns only
-  # that argument (not an array).
+  # The semantics are the same as 'return'.  When given multiple
+  # arguments, it returns an array.  When given one argument, it
+  # returns only that argument (not an array).
   #
   def leave(*args)
     Cond.code_section_stack.top.leave(*args)
   end
 
   #
-  # Run the +restartable+ or +handling+ block again.  This is called
-  # from inside handlers and restarts.
+  # Run the handling or restartable block again.
   #
   # Optionally pass arguments which are given to the block.
   #

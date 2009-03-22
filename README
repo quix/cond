@@ -40,7 +40,7 @@ Handle exceptions without unwinding the stack.
 
   % gem install cond
 
-or manually,
+or
 
   % ruby install.rb [--uninstall]
 

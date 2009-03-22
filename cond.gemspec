@@ -2,7 +2,7 @@
 Gem::Specification.new { |t|
   t.author = "James M. Lawrence"
   t.email = "quixoticsycophant@gmail.com"
-  t.summary = "Error-handling condition system"
+  t.summary = "Handle exceptions without unwinding the stack."
   t.name = "cond"
   t.rubyforge_project = t.name
   t.homepage = "#{t.name}.rubyforge.org"
@@ -13,7 +13,7 @@ Gem::Specification.new { |t|
   )
   t.files = (
     %W[README #{t.name}.gemspec] +
-    Dir["./**/*.{rb,rake,lisp}"] +
+    Dir["./**/*.rb"] +
     Dir["./**/Rakefile"]
   )
   rdoc_exclude = %w[
