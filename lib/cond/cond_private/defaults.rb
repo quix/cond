@@ -39,7 +39,7 @@ module Cond
           stream_out.puts exception.message, ""
         end
           
-        restarts = Cond.available_restarts.keys.map { |t| t.to_s }.sort.map {
+        restarts = Cond.available_restarts.keys.sort_by { |t| t.to_s}.map {
           |name|
           {
             :name => name,
@@ -58,8 +58,8 @@ module Cond
               end
             )
             stream_out.printf(
-              "%3d: %s(:%s)\n",
-              inner_index, message, restart[:name]
+              "%3d: #{message}(#{restart[:name].inspect})\n",
+              inner_index
             )
           }
           stream_out.print "> "

@@ -1,12 +1,11 @@
 $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
+require 'pp'
+require 'cond'
+include Cond
 
 #
 # http://c2.com/cgi/wiki?LispRestartExample
 #
-
-require 'pp'
-require 'cond'
-include Cond
 
 class RestartableFetchError < RuntimeError
   def initialize(key, hash)
@@ -14,16 +13,13 @@ class RestartableFetchError < RuntimeError
     @key, @hash = key, hash
   end
   def message
-    sprintf(
-      "%s error getting %s from:\n%s",
-      self, @key.inspect, @hash.pretty_inspect
-    )
+    "#{self} error getting #{@key.inspect} from:\n#{@hash.pretty_inspect}"
   end
 end
 
 def read_new_value(what)
   print("Enter a new #{what}: ")
-  eval(STDIN.readline.chomp)
+  eval($stdin.readline.chomp)
 end
 
 def restartable_fetch(hash, key, default = nil)
