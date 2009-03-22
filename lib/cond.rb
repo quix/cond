@@ -143,21 +143,21 @@ module Cond
       case keyword
       when :restart
         unless section.is_a? CondPrivate::RestartableSection
-          cond_original_raise(
+          Cond.original_raise(
             ContextError,
             "`#{keyword}' called outside of `restartable' block"
           )
         end
       when :handle
         unless section.is_a? CondPrivate::HandlingSection
-          cond_original_raise(
+          Cond.original_raise(
             ContextError,
             "`#{keyword}' called outside of `handling' block"
           )
         end
       when :leave, :again
         unless section
-          cond_original_raise(
+          Cond.original_raise(
             ContextError,
             "`#{keyword}' called outside of `handling' or `restartable' block"
           )
@@ -213,17 +213,13 @@ module Cond
     ###############################################
     # original raise
     
-    #
-    # MRI 1.9 does not like this.  Now aliased in Kernel.
-    #
-    #define_method :original_raise, Kernel.instance_method(:raise)
-    #module_function :original_raise
+    define_method :original_raise, Kernel.instance_method(:raise)
 
     ######################################################################
     # data -- all data is per-thread and fetched from the singleton class
     #
-    # Cond.defaults contains the default handlers and restarts.  To
-    # replace it, call
+    # Cond.defaults contains the default handlers.  To replace it,
+    # call
     #
     #   Cond.defaults.clear(&block)
     #
@@ -261,8 +257,8 @@ module Cond
       def initialize(with, &block)
         @with = with
         @block = block
-        @leave, @again = gensym, gensym
         @again_args = []
+        @leave, @again = gensym, gensym
         SymbolGenerator.track(self, [@leave, @again])
       end
 
@@ -402,12 +398,11 @@ module Cond
 end
 
 module Kernel
-  alias_method :cond_original_raise, :raise
   remove_method :raise
   def raise(*args)
     if Cond.handlers_stack.last.empty?
       # not using Cond
-      cond_original_raise(*args)
+      Cond.original_raise(*args)
     else
       last_exception = Cond.exception_stack.last
       exception = (
@@ -415,7 +410,7 @@ module Kernel
           last_exception
         else
           begin
-            cond_original_raise(*args)
+            Cond.original_raise(*args)
           rescue Exception => e
             e
           end
@@ -438,7 +433,7 @@ module Kernel
           handler.call(exception)
         else
           Cond.reraise_count = 0
-          cond_original_raise(exception)
+          Cond.original_raise(exception)
         end
       else
         # not inside a handler
@@ -452,12 +447,11 @@ module Kernel
             Cond.exception_stack.pop
           end
         else
-          cond_original_raise(exception)
+          Cond.original_raise(exception)
         end
       end
     end
   end
-  alias_method :cond_original_fail, :fail
   remove_method :fail
   alias_method :fail, :raise
 end
