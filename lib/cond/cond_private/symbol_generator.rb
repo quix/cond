@@ -2,7 +2,7 @@
 require 'thread'
 
 module Cond
-  module CondInner
+  module CondPrivate
     module SymbolGenerator
       @count = 'a'
       @mutex = Mutex.new

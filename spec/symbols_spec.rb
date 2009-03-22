@@ -12,10 +12,11 @@ unless defined?(RUBY_ENGINE) and RUBY_ENGINE == "jruby"
   describe "generated symbols" do
     it "should be recycled" do
       200.times { |n|
-        Cond::CondInner::CodeSection.new(:foo)
+        Cond::CondPrivate::CodeSection.new(:foo)
         GC.start
       }
-      Cond::CondInner::SymbolGenerator.gensym.to_s.should match(%r!\A\|[a-z]\Z!)
+      sym = Cond::CondPrivate::SymbolGenerator.gensym
+      sym.to_s.should match(%r!\A\|[a-z]\Z!)
     end
   end
 end

@@ -1,7 +1,7 @@
 
-require 'cond/cond_inner/thread_local'
-require 'cond/cond_inner/symbol_generator'
-require 'cond/cond_inner/defaults'
+require 'cond/cond_private/thread_local'
+require 'cond/cond_private/symbol_generator'
+require 'cond/cond_private/defaults'
 
 # 
 # Handle exceptions without unwinding the stack.  See README.
@@ -10,7 +10,7 @@ module Cond
   ######################################################################
   # Restart and Handler 
 
-  module CondInner
+  module CondPrivate
     class MessageProc < Proc  #:nodoc:
       def initialize(message = "", &block)
         @message = message
@@ -27,7 +27,7 @@ module Cond
   # to Cond.with_restarts, but you'll miss the description string
   # shown inside Cond.default_handler.
   #
-  class Restart < CondInner::MessageProc
+  class Restart < CondPrivate::MessageProc
   end
 
   #
@@ -35,7 +35,7 @@ module Cond
   # to Cond.with_handlers, but you'll miss the description string
   # shown by whichever tools might use it (currently none).
   #
-  class Handler < CondInner::MessageProc
+  class Handler < CondPrivate::MessageProc
   end
 
   ######################################################################
@@ -255,7 +255,7 @@ module Cond
     
     stack_0  = lambda { Array.new }
     stack_1  = lambda { Array.new.push(Hash.new) }
-    defaults = lambda { CondInner::Defaults.new }
+    defaults = lambda { CondPrivate::Defaults.new }
     {
       :code_section_stack => stack_0,
       :exception_stack    => stack_0,
@@ -263,12 +263,12 @@ module Cond
       :restarts_stack     => stack_1,
       :defaults           => defaults,
     }.each_pair { |name, create|
-      include CondInner::ThreadLocal.reader_module(name) {
+      include CondPrivate::ThreadLocal.reader_module(name) {
         create.call
       }
     }
 
-    include CondInner::ThreadLocal.accessor_module(:reraise_count) { 0 }
+    include CondPrivate::ThreadLocal.accessor_module(:reraise_count) { 0 }
 
     #
     # Cond.defaults contains the default handlers and restarts.  To
@@ -286,7 +286,7 @@ module Cond
 
   ######################################################################
   
-  module CondInner
+  module CondPrivate
     class CodeSection  #:nodoc:
       include SymbolGenerator
       
@@ -362,7 +362,7 @@ module Cond
   # handled without unwinding the stack.
   #
   def handling(&block)
-    Cond.run_code_section(CondInner::HandlingSection, &block)
+    Cond.run_code_section(CondPrivate::HandlingSection, &block)
   end
 
   #
@@ -370,7 +370,7 @@ module Cond
   # of the restarts in this block.
   #
   def restartable(&block)
-    Cond.run_code_section(CondInner::RestartableSection, &block)
+    Cond.run_code_section(CondPrivate::RestartableSection, &block)
   end
   
   #
@@ -380,7 +380,7 @@ module Cond
   #
   def handle(arg, message = "", &block)
     last = Cond.code_section_stack.last
-    unless last.is_a? CondInner::HandlingSection
+    unless last.is_a? CondPrivate::HandlingSection
       cond_original_raise("`handle' called outside of `handling' block")
     end
     last.handle(arg, message, &block)
@@ -394,7 +394,7 @@ module Cond
   #
   def restart(arg, message = "", &block)
     last = Cond.code_section_stack.last
-    unless last.is_a? CondInner::RestartableSection
+    unless last.is_a? CondPrivate::RestartableSection
       cond_original_raise("`restart' called outside of `restartable' block")
     end
     last.restart(arg, message, &block)

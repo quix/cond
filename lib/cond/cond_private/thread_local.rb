@@ -1,9 +1,9 @@
 
 require 'thread'
-require 'cond/cond_inner/symbol_generator'
+require 'cond/cond_private/symbol_generator'
 
 module Cond
-  module CondInner
+  module CondPrivate
     #
     # Thread-local variable.
     #

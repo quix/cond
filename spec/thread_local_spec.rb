@@ -4,7 +4,7 @@ require 'ostruct'
 
 describe "ThreadLocal" do
   it "should keep independent values in separate threads" do
-    a = Cond::CondInner::ThreadLocal.new { OpenStruct.new }
+    a = Cond::CondPrivate::ThreadLocal.new { OpenStruct.new }
     a.value.x = 33
     other_value = nil
     Thread.new {
@@ -20,7 +20,7 @@ describe "ThreadLocal" do
   
   it "should implement accessor module" do
     a = Class.new {
-      include Cond::CondInner::ThreadLocal.accessor_module(:x) { 33 }
+      include Cond::CondPrivate::ThreadLocal.accessor_module(:x) { 33 }
     }.new
     a.x.should == 33
     a.x = 44

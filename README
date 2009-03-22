@@ -121,7 +121,7 @@ It is not required to <tt>include Cond</tt>.  The includable methods
 of +Cond+ are <tt>module_function</tt>s and are thus callable via e.g.
 <tt>Cond.handling</tt>.
 
-+Cond+ hides private modules and classes inside Cond::CondInner in
++Cond+ hides private modules and classes inside Cond::CondPrivate in
 order to improve the hygiene of <tt>include Cond</tt> and encourage
 its use.
 
