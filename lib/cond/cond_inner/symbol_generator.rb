@@ -9,8 +9,7 @@ module Cond
       @recycled = []
       @object_id_to_sym_list = Hash.new
       @finalizer = lambda { |id|
-        recycle(@object_id_to_sym_list[id])
-        @object_id_to_sym_list.delete id
+        recycle(@object_id_to_sym_list.delete(id))
       }
 
       class << self
