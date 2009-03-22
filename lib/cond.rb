@@ -64,31 +64,6 @@ module Cond
     # When the block exits, the previous set of handlers (if any) are
     # restored.
     #
-    # Example:
-    #
-    #   handlers = {
-    #     #
-    #     # We are able to handle Fred errors immediately; no need to unwind
-    #     # the stack.
-    #     #
-    #     FredError => lambda { |exception|
-    #       # ...
-    #       puts "Handled a FredError. Continuing..."
-    #     },
-    #   
-    #     #
-    #     # We want to be informed of Wilma errors, but we can't handle them.
-    #     #
-    #     WilmaError => lambda { |exception|
-    #       puts "Got a WilmaError. Re-raising..."
-    #       raise
-    #     },
-    #   }
-    #
-    #   Cond.with_handlers(handlers) {
-    #     # ...
-    #   }
-    #
     def with_handlers(handlers)
       # note: leave unfactored due to notable yield vs &block performance
       handlers_stack.push(handlers_stack.last.merge(handlers))
@@ -208,7 +183,8 @@ module Cond
     def wrap_instance_method(mod, method)
       original = "cond_original_#{mod.inspect}_#{method.inspect}"
       # TODO: jettison 1.8.6, remove eval and use |&block|
-      mod.module_eval %{
+      # TODO: fix rcov bug -- does not see %{}
+      mod.module_eval <<-eval_end
         alias_method :'#{original}', :'#{method}'
         def #{method}(*args, &block)
           begin
@@ -217,7 +193,7 @@ module Cond
             raise e
           end
         end
-      }
+      eval_end
       original
     end
   

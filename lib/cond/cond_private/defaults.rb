@@ -1,9 +1,6 @@
 
 require 'cond/cond_private/symbol_generator'
-
-if RUBY_VERSION <= "1.8.6"
-  require 'enumerator'
-end
+require 'enumerator' if RUBY_VERSION <= "1.8.6"
 
 module Cond
   module CondPrivate

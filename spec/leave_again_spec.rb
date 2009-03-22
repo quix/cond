@@ -3,7 +3,7 @@ require File.dirname(__FILE__) + "/common"
 include Cond
 
 [:handling, :restartable].each { |keyword|
-  describe "leave arguments" do
+  describe "arguments to 'leave' have semantics of 'return'" do
     it "should be passed to the #{keyword} block result (none)" do
       send(keyword) do
         leave
@@ -28,7 +28,7 @@ include Cond
 }
 
 [:handling, :restartable].each { |keyword|
-  describe "again arguments" do
+  describe "arguments to 'again' have semantics of 'return'" do
     before :each do
       @memo = []
     end

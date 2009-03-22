@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + "/common"
 
 include Cond
 
-describe Cond do
+describe "error reporting" do
   it "should raise NoRestartError when restart is not found" do
     lambda {
       invoke_restart(:zzz)

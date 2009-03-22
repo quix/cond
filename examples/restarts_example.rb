@@ -34,6 +34,10 @@ describe file do
   end
 
   it "should fetch with alternate value" do
+    class Cond::Restart
+      # coverage hack
+      undef :message
+    end
     run_restarts.call(%{3\n"apple"\n}).should match(%r!value: "fruit"!)
   end
 end

@@ -40,12 +40,12 @@ describe "basic handler/restart functionality" do
     memo = []
 
     f = lambda {
+      memo.push :f
       restartable do
         restart :example_restart do |*args|
           memo.push :restart
           memo.push args
         end
-        memo.push :f
         memo.push :raise
         raise ExampleError
       end

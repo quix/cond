@@ -16,7 +16,7 @@ RANDOM_ERRORS = [
   RawError,
 ]
 
-describe "handler system" do
+describe "handler matching system" do
   before :all do
     @memo = []
     @handlers = RANDOM_ERRORS.inject(Hash.new) { |acc, ex|

@@ -18,7 +18,7 @@ describe "ThreadLocal" do
     a.value.should == 99
   end
   
-  it "should implement accessor module" do
+  it "should work with included accessor_module" do
     a = Class.new {
       include Cond::CondPrivate::ThreadLocal.accessor_module(:x) { 33 }
     }.new

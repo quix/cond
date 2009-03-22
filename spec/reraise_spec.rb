@@ -5,7 +5,7 @@ end
 
 include Cond
 
-describe "Re-raise" do
+describe "re-raise" do
   it "should work work with no arguments" do
     lambda {
       handling do

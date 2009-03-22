@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + "/common"
 
-describe "the replacement raise" do
+describe "raise replacement" do
   it "should raise" do
     lambda {
       raise NameError

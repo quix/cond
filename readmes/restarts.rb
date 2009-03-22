@@ -25,7 +25,7 @@ end
 def restartable_fetch(hash, key, default = nil)
   restartable do
     restart :continue, "Return not having found the value." do
-      return
+      return default
     end
     restart :try_again, "Try getting the key from the hash again." do
       again
@@ -55,56 +55,37 @@ Cond.with_default_handlers {
   puts("value: " + restartable_fetch(fruits_and_vegetables, "mango").inspect)
 }
 
-#  
-#  % ruby restarts.rb
+#  % ruby readmes/restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
-#  restarts.rb:58
+#  readmes/restarts.rb:54:in `<main>'
 #  RestartableFetchError error getting "mango" from:
-#  {"orange"=>"fruit",
-#   "apple"=>"fruit",
-#   "tomato"=>"depends_on_who_you_ask",
-#   "lettuce"=>"vegetable"}
+#  {"apple"=>"fruit",
+#   "orange"=>"fruit",
+#   "lettuce"=>"vegetable",
+#   "tomato"=>"depends_on_who_you_ask"}
 #  
 #    0: Return not having found the value. (:continue)
 #    1: Try getting the key from the hash again. (:try_again)
 #    2: Use a new hash. (:use_new_hash)
 #    3: Use a new key. (:use_new_key)
-#  > 0
-#  value: nil
-#
-#
-#  % ruby restarts.rb
-#  #<RestartableFetchError: RestartableFetchError>
-#  restarts.rb:58
-#  RestartableFetchError error getting "mango" from:
-#  {"orange"=>"fruit",
-#   "apple"=>"fruit",
-#   "tomato"=>"depends_on_who_you_ask",
-#   "lettuce"=>"vegetable"}
-#  
-#    0: Return not having found the value. (:continue)
-#    1: Try getting the key from the hash again. (:try_again)
-#    2: Use a new hash. (:use_new_hash)
-#    3: Use a new key. (:use_new_key)
-#  > 2
+#  Choose number: 2
 #  Enter a new hash: { "mango" => "mangoish fruit" }
 #  value: "mangoish fruit"
-#
-#
-#  % ruby restarts.rb
+#  
+#  
+#  % ruby readmes/restarts.rb
 #  #<RestartableFetchError: RestartableFetchError>
-#  restarts.rb:58
+#  readmes/restarts.rb:54:in `<main>'
 #  RestartableFetchError error getting "mango" from:
-#  {"orange"=>"fruit",
-#   "apple"=>"fruit",
-#   "tomato"=>"depends_on_who_you_ask",
-#   "lettuce"=>"vegetable"}
+#  {"apple"=>"fruit",
+#   "orange"=>"fruit",
+#   "lettuce"=>"vegetable",
+#   "tomato"=>"depends_on_who_you_ask"}
 #  
 #    0: Return not having found the value. (:continue)
 #    1: Try getting the key from the hash again. (:try_again)
 #    2: Use a new hash. (:use_new_hash)
 #    3: Use a new key. (:use_new_key)
-#  > 3
+#  Choose number: 3
 #  Enter a new key: "apple"
 #  value: "fruit"
-#  
