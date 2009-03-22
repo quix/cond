@@ -1,36 +1,19 @@
 here = File.dirname(__FILE__)
 require here + "/../spec/common"
-require 'stringio'
 
-file = here + "/../readmes/restarts.rb"
+RESTARTS_FILE = here + "/../readmes/restarts.rb"
 
-run_restarts = lambda { |string|
-  previous = [
-    $stdout, $stdin, Cond.defaults.stream_out, Cond.defaults.stream_in
-  ]
-  begin
-    StringIO.open("", "r+") { |output|
-      StringIO.open(string) { |input|
-        Cond.defaults.stream_out = output
-        Cond.defaults.stream_in = input
-        $stdout = output
-        $stdin = input
-        load file
-      }
-      output.rewind
-      output.read
-    }
-  ensure
-    $stdout, $stdin, Cond.defaults.stream_out, Cond.defaults.stream_in =
-      previous
-  end
-}
+def run_restarts(input_string)
+  capture(input_string) {
+    load RESTARTS_FILE
+  }
+end
 
-describe file do
+describe RESTARTS_FILE do
   it "should fetch with with alternate hash" do
     hash = { "mango" => "mangoish fruit" }
     re = %r!#{hash.values.first}!
-    run_restarts.call(%{2\n#{hash.inspect}\n}).should match(re)
+    run_restarts(%{2\n#{hash.inspect}\n}).should match(re)
   end
 
   it "should fetch with alternate value" do
@@ -38,6 +21,6 @@ describe file do
       # coverage hack
       undef :message
     end
-    run_restarts.call(%{3\n"apple"\n}).should match(%r!value: "fruit"!)
+    run_restarts(%{3\n"apple"\n}).should match(%r!value: "fruit"!)
   end
 end

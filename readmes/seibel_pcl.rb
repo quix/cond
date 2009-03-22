@@ -4,27 +4,58 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 # http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html
 # 
 
+#
+# Note:
+# This file is ruby-1.8.7+ only.  For 1.8.6, require 'enumerator' and
+# change input.each_line to input.to_enum(:each_line).
+#
+
+##########################################################
+# setup
+
 require 'cond'
-include Cond  # (optional)
+require 'time'
+include Cond
 
 class MalformedLogEntryError < StandardError
 end
 
+LOG_FILE = "log.txt"
+
+LOG_FILE_CONTENTS = <<EOS
+2007-01-12 05:20:03|event w
+2008-02-22 11:11:41|event x
+2008-09-04 15:30:43|event y
+I like pancakes
+2009-02-12 07:29:33|event z
+EOS
+
+File.open(LOG_FILE, "w") { |out|
+  out.print LOG_FILE_CONTENTS
+}
+
+END { File.unlink(LOG_FILE) }
+
 def parse_log_entry(text)
-  if text =~ %r!\A\#!
-    text.split
+  time, event = text.split("|")
+  if event
+    return Time.parse(time), event
   else
     raise MalformedLogEntryError
   end
 end
 
 def find_all_logs
-  [__FILE__]
+  [LOG_FILE]
 end
 
 def analyze_log(log)
   parse_log_file(log)
 end
+
+##########################################################
+# book examples
+#
 
 #
 # (defun parse-log-file (file)
@@ -34,7 +65,7 @@ end
 #                      (malformed-log-entry-error () nil))
 #        when entry collect it)))
 #
-def parse_log_file(file)
+def parse_log_file0(file)
   File.open(file) { |input|
     input.each_line.inject(Array.new) { |acc, text|
       entry = handling do
@@ -47,7 +78,7 @@ def parse_log_file(file)
   }
 end
 
-parse_log_file(__FILE__)
+parse_log_file0(LOG_FILE)
 
 # 
 # (defun parse-log-file (file)
@@ -71,9 +102,8 @@ def parse_log_file(file)
   }
 end
 
-# remove this if you want to skip past here
-Cond.debugger {
-  parse_log_file(__FILE__)
+Cond.with_default_handlers {
+  parse_log_file(LOG_FILE)
 }
 
 # 

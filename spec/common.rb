@@ -14,6 +14,7 @@ end
 require 'cond'
 
 require 'pathname'
+require 'stringio'
 
 def pipe_to_ruby(code)
   require 'quix/ruby'
@@ -23,4 +24,26 @@ def pipe_to_ruby(code)
     pipe.close_write
     pipe.read
   }
+end
+
+def capture(input_string)
+  previous = [
+    $stdout, $stdin, Cond.defaults.stream_out, Cond.defaults.stream_in
+  ]
+  begin
+    StringIO.open("", "r+") { |output|
+      StringIO.open(input_string) { |input|
+        Cond.defaults.stream_out = output
+        Cond.defaults.stream_in = input
+        $stdout = output
+        $stdin = input
+        yield
+        output.rewind
+        output.read
+      }
+    }
+  ensure
+    $stdout, $stdin, Cond.defaults.stream_out, Cond.defaults.stream_in =
+      previous
+  end
 end
