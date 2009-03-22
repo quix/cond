@@ -71,39 +71,6 @@ module Cond
             self
           }
         end
-
-        def writer_module(name, subclass = self, &block)
-          accessor_module(name, subclass, &block).instance_eval {
-            remove_method "#{name}"
-            self
-          }
-        end
-
-        def wrap_methods(names)
-          Class.new(ThreadLocal) {
-            names.each { |name|
-              # TODO: jettison 1.8.6, remove eval and use |&block|
-              eval %{
-                def #{name}(*args, &block)
-                  value.send(:'#{name}', *args, &block)
-                end
-              }
-            }
-          }
-        end
-        
-        def wrap_methods_of(klass, opts = {})
-          include_super = opts[:include_super] || true
-          names = klass.instance_methods(include_super).reject { |name|
-            name =~ %r!\A__! or name.to_sym == :object_id
-          }
-          wrap_methods(names)
-        end
-
-        def wrap_new(klass, opts = {}, &block)
-          create = block || lambda { klass.new }
-          wrap_methods_of(klass, opts).new(&create)
-        end
       end
     end
   end
