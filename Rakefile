@@ -28,12 +28,12 @@ Spec::Rake::SpecTask.new('spec') do |t|
   t.spec_files = SPEC_FILES
 end
 
-Spec::Rake::SpecTask.new('spec_text') do |t|
-  #t.spec_files = SPEC_FILES
+Spec::Rake::SpecTask.new('text_spec') do |t|
+  t.spec_files = SPEC_FILES
   t.spec_opts = ['-fs']
 end
 
-Spec::Rake::SpecTask.new('spec_full') do |t|
+Spec::Rake::SpecTask.new('full_spec') do |t|
   t.spec_files = SPEC_FILES
   t.rcov = true
   exclude_dirs = %w[readmes support examples spec]
@@ -43,7 +43,7 @@ Spec::Rake::SpecTask.new('spec_full') do |t|
   t.spec_opts = ["-fh:#{SPEC_OUTPUT}"]
 end
 
-task :spec_full_show => :spec_full do
+task :show_full_spec => :full_spec do
   args = SPEC_OUTPUT, "coverage/index.html"
   if Config::CONFIG["host"] =~ %r!darwin!
     sh("open", "/Applications/Firefox.app", *args)

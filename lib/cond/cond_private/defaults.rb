@@ -15,39 +15,13 @@ module Cond
 
       attr_accessor :stream_in, :stream_out
       
-      #
-      # These are not restarts per se, but only a convenient way to
-      # hook into the input loop.
-      #
-      def phony_restarts
-        {
-          :raise => Restart.new("Raise this exception.") { },
-          :eval => Restart.new("Run some code.") { },
-          :backtrace => Restart.new("Show backtrace.") { },
-        }
-      end
-
       def handlers
         {
           Exception => method(:handler)
         }
       end
 
-      def debugger_handlers
-        {
-          Exception => method(:debugger_handler)
-        }
-      end
-
       def handler(exception)
-        common_handler(exception, false)
-      end
-
-      def debugger_handler(exception)
-        common_handler(exception, true)
-      end
-  
-      def common_handler(exception, is_debugger)
         stream_out.puts exception.inspect, exception.backtrace.last
 
         if exception.respond_to? :message
@@ -55,8 +29,8 @@ module Cond
         end
           
         #
-        # Show restarts in the order they appear on the stack (partial
-        # differences).
+        # Show restarts in the order they appear on the stack (via
+        # partial differences).
         #
         # grr:
         #
@@ -80,54 +54,27 @@ module Cond
           end
         }.map { |level| level.map { |t| t.first } }.flatten
 
-        loop {
-          restart_index = loop {
-            restart_names.each_with_index { |name, index|
-              func = Cond.available_restarts[name]
-              message = (
-                if func.respond_to?(:message) and func.message != ""
-                  func.message + " "
-                else
-                  ""
-                end
-              )
-              stream_out.printf("%3d: %s(%s)\n", index, message, name.inspect)
-            }
-            stream_out.print "Choose number: "
-            stream_out.flush
-            input = stream_in.readline.strip
-            if input =~ %r!\A\d+\Z! and
-                (0...restart_names.size).include?(input.to_i)
-              break input.to_i
-            end
+        restart_index = loop {
+          restart_names.each_with_index { |name, index|
+            func = Cond.available_restarts[name]
+            message = (
+              if func.respond_to?(:message) and func.message != ""
+                func.message + " "
+              else
+                ""
+              end
+            )
+            stream_out.printf("%3d: %s(%s)\n", index, message, name.inspect)
           }
-          restart_name = restart_names[restart_index]
-          if is_debugger
-            case restart_name
-            when :backtrace
-              puts exception.backtrace
-              # loop again
-            when :eval
-              stream_out.print("code to eval: ")
-              eval(stream_in.readline.strip)
-              # loop again
-            when :raise
-              raise
-            else
-              break Cond.invoke_restart(restart_name)
-            end
-          else
-            break Cond.invoke_restart(restart_name)
+          stream_out.print "Choose number: "
+          stream_out.flush
+          input = stream_in.readline.strip
+          if input =~ %r!\A\d+\Z! and
+              (0...restart_names.size).include?(input.to_i)
+            break input.to_i
           end
         }
-      end
-
-      def debugger
-        Cond.with_handlers(debugger_handlers) {
-          Cond.with_restarts(phony_restarts) {
-            yield
-          }
-        }
+        Cond.invoke_restart(restart_names[restart_index])
       end
     end
   end

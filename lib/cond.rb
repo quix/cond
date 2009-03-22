@@ -47,6 +47,12 @@ module Cond
   class NoRestartError < StandardError
   end
 
+  #
+  # `handle', `restart', `leave', or `again' called out of context.
+  #
+  class ContextError < StandardError
+  end
+
   ######################################################################
   # singleton methods
 
@@ -122,16 +128,6 @@ module Cond
     end
   
     #
-    # Calls Cond.defaults.debugger.
-    #
-    # The stock debugger uses the default handlers and adds a few
-    # simple restarts to the set of available restarts.
-    #
-    def debugger(&block)
-      Cond.defaults.debugger(&block)
-    end
-  
-    #
     # The current set of restarts which have been registered.
     #
     def available_restarts
@@ -166,6 +162,33 @@ module Cond
         section.instance_eval { run }
       ensure
         Cond.code_section_stack.pop
+      end
+    end
+
+    def check_context(keyword)
+      section = Cond.code_section_stack.last
+      case keyword
+      when :restart
+        unless section.is_a? CondPrivate::RestartableSection
+          cond_original_raise(
+            ContextError,
+            "`#{keyword}' called outside of `restartable' block"
+          )
+        end
+      when :handle
+        unless section.is_a? CondPrivate::HandlingSection
+          cond_original_raise(
+            ContextError,
+            "`#{keyword}' called outside of `handling' block"
+          )
+        end
+      when :leave, :again
+        unless section
+          cond_original_raise(
+            ContextError,
+            "`#{keyword}' called outside of `handling' or `restartable' block"
+          )
+        end
       end
     end
 
@@ -231,7 +254,7 @@ module Cond
     #   Cond.defaults.clear(&block)
     #
     # where &block creates a new instance of your class which
-    # implements the methods 'handlers' and 'debugger'.
+    # implements the method 'handlers'.
     #
     # Note that &block should return a brand new instance.  Otherwise
     # the returned object will be shared across threads.
@@ -261,24 +284,25 @@ module Cond
     class CodeSection  #:nodoc:
       include SymbolGenerator
       
-      def loop_with(leave_sym, again_sym)
-        catch(leave_sym) {
-          while true
-            catch(again_sym) {
-              yield
-            }
-          end
-        }
-      end
-
       def initialize(with, &block)
         @with = with
         @block = block
         @leave, @again = gensym, gensym
+        @again_args = []
         SymbolGenerator.track(self, [@leave, @again])
       end
-      
+
       def again(*args)
+        @again_args = (
+          case args.size
+          when 0
+            []
+          when 1
+            args.first
+          else
+            args
+          end
+        )
         throw @again
       end
 
@@ -294,10 +318,14 @@ module Cond
       end
 
       def run
-        loop_with(@leave, @again) {
-          Cond.send(@with, Hash.new) {
-            throw @leave, @block.call
-          }
+        catch(@leave) {
+          while true
+            catch(@again) {
+              Cond.send(@with, Hash.new) {
+                throw @leave, @block.call(*@again_args)
+              }
+            }
+          end
         }
       end
     end
@@ -329,8 +357,8 @@ module Cond
   module_function
 
   #
-  # Begin a handling block.  Inside this block, exceptions may be
-  # handled without unwinding the stack.
+  # Begin a handling block.  Inside this block, handlers get called
+  # during when +raise+ gets called.
   #
   def handling(&block)
     Cond.run_code_section(CondPrivate::HandlingSection, &block)
@@ -350,11 +378,8 @@ module Cond
   # The exception instance is passed to the block.
   #
   def handle(arg, message = "", &block)
-    last = Cond.code_section_stack.last
-    unless last.is_a? CondPrivate::HandlingSection
-      cond_original_raise("`handle' called outside of `handling' block")
-    end
-    last.handle(arg, message, &block)
+    Cond.check_context(:handle)
+    Cond.code_section_stack.last.handle(arg, message, &block)
   end
 
   #
@@ -364,11 +389,8 @@ module Cond
   # arguments which are in turn passed to &block.
   #
   def restart(arg, message = "", &block)
-    last = Cond.code_section_stack.last
-    unless last.is_a? CondPrivate::RestartableSection
-      cond_original_raise("`restart' called outside of `restartable' block")
-    end
-    last.restart(arg, message, &block)
+    Cond.check_context(:restart)
+    Cond.code_section_stack.last.restart(arg, message, &block)
   end
 
   #
@@ -380,6 +402,7 @@ module Cond
   # returns only that argument (not an array).
   #
   def leave(*args)
+    Cond.check_context(:leave)
     Cond.code_section_stack.last.leave(*args)
   end
 
@@ -389,6 +412,7 @@ module Cond
   # Optionally pass arguments which are given to the block.
   #
   def again(*args)
+    Cond.check_context(:again)
     Cond.code_section_stack.last.again(*args)
   end
 
@@ -397,10 +421,8 @@ module Cond
   #
   def invoke_restart(name, *args, &block)
     Cond.available_restarts.fetch(name) {
-      raise(
-        NoRestartError,
+      raise NoRestartError,
         "Did not find `#{name.inspect}' in available restarts"
-      )
     }.call(*args, &block)
   end
 end
