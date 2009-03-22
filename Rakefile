@@ -36,16 +36,20 @@ end
 Spec::Rake::SpecTask.new('spec_full') do |t|
   t.spec_files = SPEC_FILES
   t.rcov = true
-  t.rcov_opts =
-    ['--exclude', 'readmes',
-     '--exclude', 'support',
-     '--exclude', 'examples',
-     '--exclude', 'spec']
+  exclude_dirs = %w[readmes support examples spec]
+  t.rcov_opts = exclude_dirs.inject(Array.new) { |acc, dir|
+    acc + ["--exclude", dir]
+  }
   t.spec_opts = ["-fh:#{SPEC_OUTPUT}"]
 end
 
 task :spec_full_show => :spec_full do
-  sh("open", "/Applications/Firefox.app", SPEC_OUTPUT, "coverage/index.html")
+  args = SPEC_OUTPUT, "coverage/index.html"
+  if Config::CONFIG["host"] =~ %r!darwin!
+    sh("open", "/Applications/Firefox.app", *args)
+  else
+    sh("firefox", *args)
+  end
 end
 
 ######################################################################
