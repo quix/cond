@@ -4,7 +4,7 @@ require 'thread'
 module Cond
   module CondInner
     module SymbolGenerator
-      @count = 0
+      @count = 'a'
       @mutex = Mutex.new
       @recycled = []
       @object_id_to_sym_list = Hash.new
@@ -14,15 +14,11 @@ module Cond
       }
 
       class << self
-        def gensym(prefix = nil)
+        def gensym
           @mutex.synchronize {
             if @recycled.empty?
-              @count += 1
-              if prefix
-                :"|#{prefix}#{@count}|"
-              else
-                :"|#{@count}"
-              end
+              @count.succ!
+              :"|#{@count}"
             else
               @recycled.shift
             end

@@ -17,9 +17,9 @@ module Cond
       # &default normally creates a new object, otherwise the returned
       # object will be shared across threads.
       #
-      def initialize(prefix = nil, &default)
-        @name = gensym(prefix)
-        @accessed = gensym(prefix)
+      def initialize(&default)
+        @name = gensym
+        @accessed = gensym
         @default = default
         SymbolGenerator.track(self, [@name, @accessed])
       end
@@ -54,7 +54,7 @@ module Cond
 
       class << self
         def accessor_module(name, subclass = self, &block)
-          var = subclass.new(name, &block)
+          var = subclass.new(&block)
           Module.new {
             define_method(name) {
               var.value

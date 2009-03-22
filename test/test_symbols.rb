@@ -9,8 +9,8 @@ __END__
 # 20.  For jruby it forever increases, which presumably is a bug.
 #
 loop {
-  obj = Cond::CodeSection.new(:foo)
-  Cond::SymbolGenerator.instance_eval {
+  obj = Cond::CondInner::CodeSection.new(:foo)
+  Cond::CondInner::SymbolGenerator.instance_eval {
     puts @count
   }
   GC.start
