@@ -13,23 +13,40 @@ GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
 DOC_DIR = "documentation"
 
-SPEC_FILES = FileList['spec/*_spec.rb'] + FileList['examples/*_example.rb']
-
-######################################################################
-# coverage
-
-Spec::Rake::SpecTask.new('cov') do |t|
-  t.spec_files = SPEC_FILES
-  t.rcov = true
-  t.rcov_opts = ['--exclude', 'spec', '--exclude', 'support']
-end
-
-task :rcov => :cov
+SPEC_FILES = Dir['spec/*_spec.rb'] + Dir['examples/*_example.rb']
+SPEC_OUTPUT = "spec_output.html"
 
 ######################################################################
 # default
 
 task :default => :spec
+
+######################################################################
+# spec
+
+Spec::Rake::SpecTask.new('spec') do |t|
+  t.spec_files = SPEC_FILES
+end
+
+Spec::Rake::SpecTask.new('spec_text') do |t|
+  #t.spec_files = SPEC_FILES
+  t.spec_opts = ['-fs']
+end
+
+Spec::Rake::SpecTask.new('spec_full') do |t|
+  t.spec_files = SPEC_FILES
+  t.rcov = true
+  t.rcov_opts =
+    ['--exclude', 'readmes',
+     '--exclude', 'support',
+     '--exclude', 'examples',
+     '--exclude', 'spec']
+  t.spec_opts = ["-fh:#{SPEC_OUTPUT}"]
+end
+
+task :spec_full_show => :spec_full do
+  sh("open", "/Applications/Firefox.app", SPEC_OUTPUT, "coverage/index.html")
+end
 
 ######################################################################
 # clean
@@ -39,13 +56,7 @@ end
 
 task :clean_doc do
   rm_rf(DOC_DIR)
-end
-
-######################################################################
-# spec
-
-task :spec do
-  require 'spec/all'
+  rm_f(SPEC_OUTPUT)
 end
 
 ######################################################################
