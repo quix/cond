@@ -4,7 +4,6 @@ require 'spec/rake/spectask'
 require 'rake/gempackagetask'
 require 'rake/contrib/rubyforgepublisher'
 require 'rdoc/rdoc'
-require 'pathname'
 
 require 'fileutils'
 include FileUtils
@@ -13,7 +12,7 @@ README = "README"
 PROJECT_NAME = "cond"
 GEMSPEC = eval(File.read("#{PROJECT_NAME}.gemspec"))
 raise unless GEMSPEC.name == PROJECT_NAME
-DOC_DIR = "documentation"
+DOC_DIR = "html"
 
 SPEC_FILES = Dir['spec/*_spec.rb'] + Dir['examples/*_example.rb']
 SPEC_OUTPUT = "spec_output.html"
@@ -131,11 +130,20 @@ end
 # publisher
 
 task :publish => :doc do
-  Rake::RubyForgePublisher.new(GEMSPEC.name, 'cond').upload
+  Rake::RubyForgePublisher.new(GEMSPEC.name, 'quix').upload
 end
 
 ######################################################################
 # release
+
+unless respond_to? :tap
+  module Kernel
+    def tap
+      yield self
+      self
+    end
+  end
+end 
 
 task :prerelease => :clean do
   rm_rf(DOC_DIR)
@@ -143,7 +151,7 @@ task :prerelease => :clean do
   unless `git status` =~ %r!nothing to commit \(working directory clean\)!
     raise "Directory not clean"
   end
-  unless `ping -c2 github.com` =~ %r!0% packet loss!i
+  unless `ping github.com 2 2` =~ %r!0% packet loss!i
     raise "No ping for github.com"
   end
 end

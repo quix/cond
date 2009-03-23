@@ -85,7 +85,7 @@ called.
 
 Cond is 100% compatible with the built-in exception-handling system.
 We may imagine that Ruby had this handler/restart functionality from
-very the beginning, but everyone had forgotten to write restarts.  And
+the very beginning, but everyone had forgotten to write restarts.  And
 since no restarts were available, no handlers were written.
 
 == Background
