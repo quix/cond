@@ -237,6 +237,21 @@ end
 task :prerelease => :check_columns
 
 ######################################################################
+# comments
+
+task :comments do
+  write_file("comments") {
+    Array.new.tap { |result|
+      (["Rakefile"] + Dir["**/*.{rb,rake}"]).each { |file|
+        File.read(file).scan(%r!\#[^\{].*$!) { |match|
+          result << match
+        }
+      }
+    }.join("\n")
+  }
+end
+
+######################################################################
 # release
 
 def git(*args)
@@ -328,6 +343,14 @@ def replace_file(file)
         output.print(new_contents)
       }
     end
+  }
+end
+
+def write_file(file)
+  yield.tap { |contents|
+    File.open(file, "wb") { |out|
+      out.print(contents)
+    }
   }
 end
 
