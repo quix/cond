@@ -21,7 +21,6 @@ module Cond
         @name = gensym
         @accessed = gensym
         @default = default
-        SymbolGenerator.track(self, [@name, @accessed])
       end
 
       #
