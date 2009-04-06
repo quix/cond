@@ -1,7 +1,5 @@
 require File.dirname(__FILE__) + "/../spec/common"
 
-require 'quix/ruby'
-
 root = Pathname(__FILE__).dirname + ".."
 file = root + "README"
 lib = root + "lib"

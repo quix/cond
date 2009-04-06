@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
-$LOAD_PATH.unshift File.dirname(__FILE__) + "/../support"
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../rakelib"
 
 # darn rspec warnings
 $VERBOSE = false
@@ -17,8 +17,8 @@ require 'pathname'
 require 'stringio'
 
 def pipe_to_ruby(code)
-  require 'quix/ruby'
-  IO.popen(%{"#{Quix::Ruby::EXECUTABLE}"}, "r+") { |pipe|
+  require 'jumpstart/ruby'
+  IO.popen(%{"#{Jumpstart::Ruby::EXECUTABLE}"}, "r+") { |pipe|
     pipe.puts code
     pipe.flush
     pipe.close_write

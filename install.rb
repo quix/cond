@@ -1,3 +1,3 @@
-$LOAD_PATH.unshift "./support"
-require 'quix/simple_installer'
-Quix::SimpleInstaller.new.run
+$LOAD_PATH.unshift "rakelib"
+require 'jumpstart/simple_installer'
+Jumpstart::SimpleInstaller.new.run

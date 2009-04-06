@@ -1,7 +1,7 @@
 
 require 'rbconfig'
 
-module Quix
+module Jumpstart
   module Ruby
     EXECUTABLE = lambda {
       name = File.join(
@@ -11,7 +11,7 @@ module Quix
 
       if Config::CONFIG["host"] =~ %r!(mswin|cygwin|mingw)! and
           File.basename(name) !~ %r!\.(exe|com|bat|cmd)\Z!i
-        name + ".exe"
+        name + Config::CONFIG["EXEEXT"]
       else
         name
       end

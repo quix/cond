@@ -3,7 +3,7 @@ require 'rbconfig'
 require 'fileutils'
 require 'find'
 
-module Quix
+module Jumpstart
   class SimpleInstaller
     def initialize
       dest_root = Config::CONFIG["sitelibdir"]
@@ -56,12 +56,9 @@ module Quix
     end
   
     def install_file?(source)
-      !File.symlink?(source) and
-        (File.directory?(source) or
-          (File.file?(source) and File.extname(source) == ".rb"))
+      File.directory?(source) or
+      (File.file?(source) and File.extname(source) == ".rb")
     end
-
-    attr_accessor :spec
 
     def install
       @spec.each { |entry|
@@ -76,7 +73,7 @@ module Quix
     end
 
     def run(args = ARGV)
-      if args.empty? or (args.size == 1 and args.first == "install")
+      if args.empty?
         install
       elsif args.size == 1 and args.first == "--uninstall"
         uninstall
