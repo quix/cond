@@ -258,7 +258,7 @@ module Cond
         @block = block
         @again_args = []
         @leave, @again = gensym, gensym
-        SymbolGenerator.track(self, [@leave, @again])
+        SymbolGenerator.track(self, @leave, @again)
       end
 
       def again(*args)

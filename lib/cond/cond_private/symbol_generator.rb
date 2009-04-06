@@ -30,9 +30,9 @@ module Cond
           }
         end
         
-        def track(object, syms)
+        def track(object, *syms)
           @mutex.synchronize {
-            @object_id_to_sym_list[object.object_id] = syms.dup
+            @object_id_to_sym_list[object.object_id] = syms.flatten
             ObjectSpace.define_finalizer(object, @finalizer)
           }
         end
