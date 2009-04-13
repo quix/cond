@@ -12,8 +12,9 @@ Gem::Specification.new { |t|
     You decide whether or not the stack should be unwound, depending on
     the circumstance and the error.
   EOS
+  readme = "README.rdoc"
   t.files = (
-    %W[README #{t.name}.gemspec] +
+    [readme, "#{t.name}.gemspec"] +
     Dir["./**/*.rb"] +
     Dir["./**/Rakefile"]
   )
@@ -25,10 +26,10 @@ Gem::Specification.new { |t|
     lib/cond/cond_private
   ]
   t.has_rdoc = true
-  t.extra_rdoc_files = %w[README]
+  t.extra_rdoc_files = [readme]
   t.rdoc_options += [
     "--main",
-    "README",
+    readme,
     "--title",
     "#{t.name}: #{t.summary}",
   ] + rdoc_exclude.inject(Array.new) { |acc, pattern|

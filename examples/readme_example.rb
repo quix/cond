@@ -1,7 +1,7 @@
 require File.dirname(__FILE__) + "/../spec/common"
 
 root = Pathname(__FILE__).dirname + ".."
-file = root + "README"
+file = root + "README.rdoc"
 lib = root + "lib"
 
 describe file do
