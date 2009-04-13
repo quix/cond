@@ -18,7 +18,7 @@ end
 GEMSPEC = eval(File.read(Dir["*.gemspec"].last))
 
 DOC_DIR = "documentation"
-SPEC_FILES = Dir['spec/*_spec.rb'] + Dir['examples/*_example.rb']
+SPEC_FILES = Dir['spec/*_{spec,example}.rb'] + Dir['examples/*_example.rb']
 TEST_FILES = Dir['test/test_*.rb']
 RCOV_DIR = "coverage"
 SPEC_OUTPUT = "spec.html"
