@@ -1,7 +1,7 @@
 $LOAD_PATH.unshift File.dirname(__FILE__)
 
 require 'rake/gempackagetask'
-require 'rake/contrib/rubyforgepublisher'
+require 'rake/contrib/sshpublisher'
 require 'rake/clean'
 require 'rdoc/rdoc'
 
@@ -160,7 +160,11 @@ task :clean => :clean_doc
 
 desc "upload docs"
 task :publish => [:clean_doc, :doc] do
-  Rake::RubyForgePublisher.new(GEMSPEC.name, RUBYFORGE_USER).upload
+  Rake::SshDirPublisher.new(
+    "#{RUBYFORGE_USER}@rubyforge.org",
+    "/var/www/gforge-projects/#{GEMSPEC.rubyforge_project}",
+    DOC_DIR
+  ).upload
 end
 
 ######################################################################
