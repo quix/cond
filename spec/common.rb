@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
-$LOAD_PATH.unshift File.dirname(__FILE__) + "/../rakelib"
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../devel"
 
 # darn rspec warnings
 $VERBOSE = false

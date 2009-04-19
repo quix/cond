@@ -1,8 +1,18 @@
+$LOAD_PATH.unshift "devel"
 
-README = "README"
+require 'jumpstart'
+
+readme_file = nil
+ 
+Jumpstart.new('cond') do |s|
+  s.developer('James M. Lawrence', 'quixoticsycophant@gmail.com')
+  s.description_sentences = 2
+  s.rdoc_files = %w[lib/cond.rb]
+  readme_file = s.readme_file
+end
 
 task :readme do
-  readme = File.read(README)
+  readme = File.read(readme_file)
   restarts = File.read("readmes/restarts.rb")
   run_re = %r!\A\#  !
   update = readme.sub(%r!(= Restart Example\n)(.*?)(?=^Run)!m) {
@@ -13,7 +23,7 @@ task :readme do
     $1 + "\n" +
     restarts.lines.grep(run_re).map { |t| t.sub(run_re, "  ") }.join + "\n"
   }
-  File.open(README, "w") { |f| f.print update }
+  File.open(readme_file, "w") { |f| f.print update }
 end
 
 task :prerelease => :readme

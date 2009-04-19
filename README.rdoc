@@ -1,7 +1,7 @@
 
 = Cond
 
-== Description
+== Summary
 
 Resolve errors without unwinding the stack.
 
@@ -36,7 +36,7 @@ Resolve errors without unwinding the stack.
 or
   % ruby install.rb [--uninstall]
 
-== Overview
+== Description
 
 Cond allows errors to be handled near the place where they occur,
 before the stack unwinds.  It offers several advantages over

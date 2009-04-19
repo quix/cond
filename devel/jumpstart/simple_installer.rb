@@ -3,7 +3,7 @@ require 'rbconfig'
 require 'fileutils'
 require 'find'
 
-module Jumpstart
+class Jumpstart
   class SimpleInstaller
     def initialize
       dest_root = Config::CONFIG["sitelibdir"]
