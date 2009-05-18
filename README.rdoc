@@ -237,7 +237,7 @@ order to improve the hygiene of <tt>include Cond</tt> and encourage
 its use.
 
 Except for the redefinition +raise+, Cond does not silently modify any
-of the standard classes
+of the standard classes.
 
 The essential implementation is small and simple: it consists of two
 per-thread stacks of hashes (handlers and restarts) with merge-push
