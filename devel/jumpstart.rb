@@ -184,12 +184,12 @@ class Jumpstart
           g.homepage = url
         end
 
-        normalize_deps(extra_deps).each { |dep|
-          g.add_dependency(dep)
+        extra_deps.each { |dep|
+          g.add_dependency(*dep)
         }
 
-        normalize_deps(extra_dev_deps).each { |dep|
-          g.add_development_dependency(dep)
+        extra_dev_deps.each { |dep|
+          g.add_development_dependency(*dep)
         }
       }
     end
@@ -267,15 +267,7 @@ class Jumpstart
 
   def developer(name, email)
     authors << name
-    email << email
-  end
-
-  def normalize_deps(deps)
-    if deps.is_a? Enumerable
-      deps.to_a.flatten
-    else
-      [deps]
-    end
+    self.email << email
   end
 
   def authors
@@ -284,6 +276,10 @@ class Jumpstart
 
   def email
     @email ||= Array.new
+  end
+
+  def dependency(name, version)
+    extra_deps << [name, version]
   end
 
   def define_clean
