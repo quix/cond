@@ -1,14 +1,8 @@
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../devel"
 
-# darn rspec warnings
-$VERBOSE = false
-begin
-  require 'spec'
-rescue LoadError
-  require 'rubygems'
-  require 'spec'
-end
+require 'rubygems'
+require 'spec/autorun'
 
 # NOTE: In jruby this must come after require 'rubygems'
 require 'cond'
