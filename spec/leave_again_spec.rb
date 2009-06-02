@@ -36,10 +36,10 @@ include Cond
       send(keyword) do |*args|
         @memo.push :visit
         if @memo.size == 2
-          args.should == []
+          args.should eql([])
           again
         elsif @memo.size == 3
-          args.should == []
+          args.should eql([])
           leave
         end
         again
@@ -49,10 +49,10 @@ include Cond
       send(keyword) do |*args|
         @memo.push :visit
         if @memo.size == 2
-          args.should == [3]
+          args.should eql([3])
           again
         elsif @memo.size == 3
-          args.should == []
+          args.should eql([])
           leave
         end
         again 3
@@ -62,10 +62,10 @@ include Cond
       send(keyword) do |*args|
         @memo.push :visit
         if @memo.size == 2
-          args.should == [4, 5]
+          args.should eql([4, 5])
           again
         elsif @memo.size == 3
-          args.should == []
+          args.should eql([])
           leave
         end
         again 4, 5
@@ -75,10 +75,10 @@ include Cond
       send(keyword) do |*args|
         @memo.push :visit
         if @memo.size == 2
-          args.should == [6, 7]
+          args.should eql([6, 7])
           again
         elsif @memo.size == 3
-          args.should == []
+          args.should eql([])
           leave
         end
         again [6, 7]

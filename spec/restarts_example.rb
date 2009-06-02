@@ -1,11 +1,16 @@
 here = File.dirname(__FILE__)
 require here + "/../spec/common"
 
+$LOAD_PATH.unshift "devel"
+require 'jumpstart/ruby'
+
 RESTARTS_FILE = here + "/../readmes/restarts.rb"
 
 def run_restarts(input_string)
   capture(input_string) {
-    load RESTARTS_FILE
+    Jumpstart::Ruby.no_warnings {
+      load RESTARTS_FILE
+    }
   }
 end
 

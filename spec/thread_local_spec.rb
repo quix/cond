@@ -12,18 +12,18 @@ describe "ThreadLocal" do
       other_value = a.value.x
     }.join
   
-    a.value.x.should == 33
-    other_value.should == 44
+    a.value.x.should eql(33)
+    other_value.should eql(44)
     a.clear { 99 }
-    a.value.should == 99
+    a.value.should eql(99)
   end
   
   it "should work with included accessor_module" do
     a = Class.new {
       include Cond::CondPrivate::ThreadLocal.accessor_module(:x) { 33 }
     }.new
-    a.x.should == 33
+    a.x.should eql(33)
     a.x = 44
-    a.x.should == 44
+    a.x.should eql(44)
   end
 end
