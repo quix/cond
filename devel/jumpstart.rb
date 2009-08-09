@@ -12,249 +12,16 @@ require 'rake/clean'
 require 'rdoc/rdoc'
 
 require 'jumpstart/ruby'
-require 'jumpstart/lazy_attribute'
+require 'jumpstart/attr_lazy'
 require 'jumpstart/simple_installer'
 
 class Jumpstart
-  include LazyAttribute
+  include AttrLazy
+
+  attr_reader :project_name
 
   def initialize(project_name)
-    attribute :name do
-      project_name
-    end
-
-    attribute :version do
-      const = "VERSION"
-      begin
-        require name
-        if mod = Object.const_get(to_camel_case(name))
-          candidates = mod.constants.grep(%r!#{const}!)
-          result = (
-            if candidates.size == 1
-              candidates.first
-            elsif candidates.include? const
-              const
-            else
-              raise
-            end
-          )
-          mod.const_get(result)
-        else
-          raise
-        end
-      rescue Exception
-        "0.0.0"
-      end
-    end
-
-    attribute :rubyforge_name do
-      name.gsub('_', '')
-    end
-
-    attribute :rubyforge_user do
-      email.first[%r!^.*(?=@)!]
-    end
-
-    attribute :readme_file do
-      "README.rdoc"
-    end
-
-    attribute :history_file do
-      "CHANGES.rdoc"
-    end
-
-    attribute :doc_dir do
-      "documentation"
-    end
-
-    attribute :spec_files do
-      Dir["spec/*_{spec,example}.rb"]
-    end
-
-    attribute :test_files do
-      Dir["test/test_*.rb"]
-    end
-
-    attribute :rcov_dir do
-      "coverage"
-    end
-
-    attribute :spec_output do
-      "spec.html"
-    end
-
-    %w[gem tgz].map { |ext|
-      attribute ext.to_sym do
-        "pkg/#{name}-#{version}.#{ext}"
-      end
-    }
-
-    attribute :rcov_options do
-      # workaround for the default rspec task
-      Dir["*"].select { |f| File.directory? f }.inject(Array.new) { |acc, dir|
-        if dir == "lib"
-          acc
-        else
-          acc + ["--exclude", dir + "/"]
-        end
-      } + ["--text-report"]
-    end
-
-    attribute :readme_file do
-      "README.rdoc"
-    end
-    
-    attribute :manifest_file do
-      "MANIFEST"
-    end
-
-    attribute :files do
-      if File.exist?(manifest_file)
-        File.read(manifest_file).split("\n")
-      else
-        [manifest_file] + `git ls-files`.split("\n")
-      end
-    end
-
-    attribute :rdoc_files do
-      Dir["lib/**/*.rb"]
-    end
-    
-    attribute :extra_rdoc_files do
-      if File.exist?(readme_file)
-        [readme_file]
-      else
-        []
-      end
-    end
-
-    attribute :rdoc_options do
-      if File.exist?(readme_file)
-        ["--main", readme_file]
-      else
-        []
-      end + [
-       "--title", "#{name}: #{summary}",
-      ] + (files - rdoc_files).inject(Array.new) { |acc, file|
-        acc + ["--exclude", file]
-      }
-    end
-
-    attribute :browser do
-      if Config::CONFIG["host"] =~ %r!darwin!
-        app = %w[Firefox Safari].map { |t|
-          "/Applications/#{t}.app"
-        }.select { |t|
-          File.exist? t
-        }.first
-        if app
-          ["open", app]
-        else
-          raise "need to set `browser'"
-        end
-      else
-        "firefox"
-      end
-    end
-
-    attribute :gemspec do
-      Gem::Specification.new { |g|
-        g.has_rdoc = true
-        %w[
-          name
-          authors
-          email
-          summary
-          version
-          description
-          files
-          extra_rdoc_files
-          rdoc_options
-        ].each { |param|
-          value = send(param) and (
-            g.send("#{param}=", value)
-          )
-        }
-
-        if rubyforge_name
-          g.rubyforge_project = rubyforge_name
-        end
-
-        if url
-          g.homepage = url
-        end
-
-        extra_deps.each { |dep|
-          g.add_dependency(*dep)
-        }
-
-        extra_dev_deps.each { |dep|
-          g.add_development_dependency(*dep)
-        }
-      }
-    end
-
-    attribute :readme_contents do
-      File.read(readme_file) rescue "FIXME: readme_file"
-    end
-    
-    attribute :sections do
-      begin
-        pairs = Hash[*readme_contents.split(%r!^== (\w+).*?$!)[1..-1]].map {
-          |section, contents|
-          [section.downcase, contents.strip]
-        }
-        Hash[*pairs.flatten]
-      rescue
-        nil
-      end
-    end
-
-    attribute :description_section do
-      "description"
-    end
-
-    attribute :summary_section do
-      "summary"
-    end
-
-    attribute :description_sentences do
-      1
-    end
-
-    attribute :summary_sentences do
-      1
-    end
-    
-    [:summary, :description].each { |section|
-      attribute section do
-        begin
-          sections[send("#{section}_section")].
-          gsub("\n", " ").
-          split(%r!\.\s*!m).
-          first(send("#{section}_sentences")).
-          join(".  ") << "."
-        rescue
-          "FIXME: #{section}"
-        end
-      end
-    }
-
-    attribute :url do
-      begin
-        readme_contents.match(%r!^\*.*?(http://\S+)!)[1]
-      rescue
-        "http://#{rubyforge_name}.rubyforge.org"
-      end
-    end
-
-    attribute :extra_deps do
-      []
-    end
-
-    attribute :extra_dev_deps do
-      []
-    end
+    @project_name = project_name
 
     yield self
 
@@ -265,17 +32,243 @@ class Jumpstart
     }
   end
 
+  class << self
+    alias_method :attribute, :attr_lazy_accessor
+  end
+
+  attribute :name do
+    project_name
+  end
+
+  attribute :version do
+    require name
+    mod = to_camel_case(name)
+    
+    (full_const_get("#{mod}::VERSION") rescue nil) ||
+    (full_const_get("#{mod}::#{mod}Private::VERSION") rescue nil) ||
+    "0.0.0"
+  end
+  
+  attribute :rubyforge_name do
+    name.gsub('_', '')
+  end
+
+  attribute :rubyforge_user do
+    email.first[%r!^.*(?=@)!]
+  end
+  
+  attribute :readme_file do
+    "README.rdoc"
+  end
+  
+  attribute :history_file do
+    "CHANGES.rdoc"
+  end
+  
+  attribute :doc_dir do
+    "documentation"
+  end
+  
+  attribute :spec_files do
+    Dir["spec/*_{spec,example}.rb"]
+  end
+  
+  attribute :test_files do
+    (Dir["test/test_*.rb"] + Dir["test/*_test.rb"]).uniq
+  end
+  
+  attribute :rcov_dir do
+    "coverage"
+  end
+  
+  attribute :spec_output do
+    "spec.html"
+  end
+
+  [:gem, :tgz].map { |ext|
+    attribute ext do
+      "pkg/#{name}-#{version}.#{ext}"
+    end
+  }
+
+  attribute :rcov_options do
+    # workaround for the default rspec task
+    Dir["*"].select { |f| File.directory? f }.inject(Array.new) { |acc, dir|
+      if dir == "lib"
+        acc
+      else
+        acc + ["--exclude", dir + "/"]
+      end
+    } + ["--text-report"]
+  end
+
+  attribute :readme_file do
+    "README.rdoc"
+  end
+    
+  attribute :manifest_file do
+    "MANIFEST"
+  end
+
+  attribute :files do
+    if File.exist?(manifest_file)
+      File.read(manifest_file).split("\n")
+    else
+      [manifest_file] + `git ls-files`.split("\n")
+    end
+  end
+
+  attribute :rdoc_files do
+    Dir["lib/**/*.rb"]
+  end
+    
+  attribute :extra_rdoc_files do
+    if File.exist?(readme_file)
+      [readme_file]
+    else
+      []
+    end
+  end
+
+  attribute :rdoc_options do
+    if File.exist?(readme_file)
+      ["--main", readme_file]
+    else
+      []
+    end + [
+     "--title", "#{name}: #{summary}",
+    ] + (files - rdoc_files).inject(Array.new) { |acc, file|
+      acc + ["--exclude", file]
+    }
+  end
+
+  attribute :browser do
+    if Config::CONFIG["host"] =~ %r!darwin!
+      app = %w[Firefox Safari].map { |t|
+        "/Applications/#{t}.app"
+      }.select { |t|
+        File.exist? t
+      }.first
+      if app
+        ["open", app]
+      else
+        raise "need to set `browser'"
+      end
+    else
+      "firefox"
+    end
+  end
+
+  attribute :gemspec do
+    Gem::Specification.new { |g|
+      g.has_rdoc = true
+      %w[
+        name
+        authors
+        email
+        summary
+        version
+        description
+        files
+        extra_rdoc_files
+        rdoc_options
+      ].each { |param|
+        value = send(param) and (
+          g.send("#{param}=", value)
+        )
+      }
+
+      if rubyforge_name
+        g.rubyforge_project = rubyforge_name
+      end
+
+      if url
+        g.homepage = url
+      end
+
+      extra_deps.each { |dep|
+        g.add_dependency(*dep)
+      }
+
+      extra_dev_deps.each { |dep|
+        g.add_development_dependency(*dep)
+      }
+    }
+  end
+
+  attribute :readme_contents do
+    File.read(readme_file) rescue "FIXME: readme_file"
+  end
+  
+  attribute :sections do
+    begin
+      pairs = Hash[*readme_contents.split(%r!^== (\w+).*?$!)[1..-1]].map {
+        |section, contents|
+        [section.downcase, contents.strip]
+      }
+      Hash[*pairs.flatten]
+    rescue
+      nil
+    end
+  end
+
+  attribute :description_section do
+    "description"
+  end
+
+  attribute :summary_section do
+    "summary"
+  end
+
+  attribute :description_sentences do
+    1
+  end
+
+  attribute :summary_sentences do
+    1
+  end
+  
+  [:summary, :description].each { |section|
+    attribute section do
+      begin
+        sections[send("#{section}_section")].
+        gsub("\n", " ").
+        split(%r!\.\s*!m).
+        first(send("#{section}_sentences")).
+        join(".  ") << "."
+      rescue
+        "FIXME: #{section}"
+      end
+    end
+  }
+
+  attribute :url do
+    begin
+      readme_contents.match(%r!^\*.*?(http://\S+)!)[1]
+    rescue
+      "http://#{rubyforge_name}.rubyforge.org"
+    end
+  end
+
+  attribute :extra_deps do
+    []
+  end
+
+  attribute :extra_dev_deps do
+    []
+  end
+
+  attribute :authors do
+    Array.new
+  end
+
+  attribute :email do
+    Array.new
+  end
+
   def developer(name, email)
     authors << name
     self.email << email
-  end
-
-  def authors
-    @authors ||= Array.new
-  end
-
-  def email
-    @email ||= Array.new
   end
 
   def dependency(name, version)
@@ -484,14 +477,14 @@ class Jumpstart
   def define_comments
     task :comments do
       file = "comments.txt"
-      write_file(file) {
-        Array.new.tap { |result|
-          (["Rakefile"] + Dir["**/*.{rb,rake}"]).each { |file|
-            File.read(file).scan(%r!\#[^\{].*$!) { |match|
-              result << match
-            }
+      Jumpstart.write_file(file) {
+        result = Array.new
+        (["Rakefile"] + Dir["**/*.{rb,rake}"]).each { |file|
+          File.read(file).scan(%r!\#[^\{].*$!) { |match|
+            result << match
           }
-        }.join("\n")
+        }
+        result.join("\n")
       }
       CLEAN.include file
     end
@@ -543,7 +536,7 @@ class Jumpstart
   end
 
   def create_manifest
-    write_file(manifest_file) {
+    Jumpstart.write_file(manifest_file) {
       files.sort.join("\n")
     }
   end
@@ -564,9 +557,9 @@ class Jumpstart
 
     task :finish_release do
       gem_md5, tgz_md5 = [gem, tgz].map { |file|
-        "#{file}.md5".tap { |md5|
-          sh("md5sum #{file} > #{md5}")
-        }
+        md5 = "#{file}.md5"
+        sh("md5sum #{file} > #{md5}")
+        md5
       }
 
       rubyforge("add_release", gem)
@@ -591,14 +584,6 @@ class Jumpstart
     sh(*([browser].flatten + files))
   end
 
-  def write_file(file)
-    yield.tap { |contents|
-      File.open(file, "wb") { |out|
-        out.print(contents)
-      }
-    }
-  end
-
   def run_ruby_on_each(*files)
     files.each { |file|
       Ruby.run("-w", file)
@@ -609,25 +594,104 @@ class Jumpstart
     str.split('_').map { |t| t.capitalize }.join
   end
 
+  def full_const_get(string)
+    string.split("::").inject(Object) { |acc, name|
+      if acc.constants.include?(name)
+        acc.const_get(name)
+      else
+        raise NameError, "uninitialized constant #{string}"
+      end
+    }
+  end
+
   class << self
+    def write_file(file)
+      contents = yield
+      File.open(file, "wb") { |out|
+        out.print(contents)
+      }
+      contents
+    end
+
     def replace_file(file)
       old_contents = File.read(file)
-      yield(old_contents).tap { |new_contents|
-        if old_contents != new_contents
-          File.open(file, "wb") { |output|
-            output.print(new_contents)
-          }
-        end
-      }
+      new_contents = yield(old_contents)
+      if old_contents != new_contents
+        File.open(file, "wb") { |output|
+          output.print(new_contents)
+        }
+      end
+      new_contents
     end
-  end
-end
 
-unless respond_to? :tap
-  class Object
-    def tap
-      yield self
-      self
+    def run_doc_section(file, section)
+      require 'tempfile'
+
+      body, expected = (
+        contents = File.read(file)
+        re = %r!^=+[ \t]*#{section}.*?^(.*?)^(\S.*?)\s*?^(.*?)^\S!m
+        if match = contents.match(re)
+          if match[2] == "output:"
+            [match[1], match[3]]
+          else
+            [match[1], match[1].scan(%r!\# => (.*?)\n!).flatten.join("\n")]
+          end
+        else
+          raise "couldn't find section `#{section}' of `#{file}'"
+        end
+      )
+
+      lib = File.expand_path(File.dirname(__FILE__) + "/../lib")
+      header = %{
+        $LOAD_PATH.unshift "#{lib}"
+        require 'rubygems'
+      }
+      code = header + body
+
+      actual = nil
+      Tempfile.open("run-ruby-#{file}") { |temp_file|
+        temp_file.print(code)
+        temp_file.close
+        result = `"#{::Jumpstart::Ruby::EXECUTABLE}" "#{temp_file.path}"`
+        unless $?.exitstatus == 0
+          raise "failed to run ruby"
+        end
+        actual = result.chomp
+      }
+
+      if block_given?
+        yield expected, actual
+      else
+        [expected, actual]
+      end
+    end
+
+    def doc_to_spec(file, *sections, &block)
+      jump = self
+      describe file do
+        sections.each { |section|
+          describe section do
+            it "should run as claimed" do
+              expected, actual = jump.run_doc_section(file, section, &block)
+              actual.should == expected
+            end
+          end
+        }
+      end
+    end
+
+    def doc_to_test(file, *sections, &block)
+      jump = self
+      klass = Class.new Test::Unit::TestCase do
+        sections.each { |section|
+          define_method "test_#{file}_#{section}" do
+            expected, actual = jump.run_doc_section(file, section, &block)
+            assert_equal expected, actual
+          end
+        }
+      end
+      # minitest fails without a const name in 1.9
+      Object.const_set("Test#{file}".gsub(".", ""), klass)
     end
   end
 end
