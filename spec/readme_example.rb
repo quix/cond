@@ -1,25 +1,6 @@
-require File.dirname(__FILE__) + "/../spec/common"
+require File.dirname(__FILE__) + "/common"
 
-root = Pathname(__FILE__).dirname + ".."
-file = root + "README.rdoc"
-lib = root + "lib"
+$LOAD_PATH.unshift File.dirname(__FILE__) + "/../devel"
+require "jumpstart"
 
-describe file do
-  ["Synopsis",
-   "Raw Form",
-   "Synopsis 2.0",
-  ].each { |section|
-    it "#{section} should run as claimed" do
-      contents = file.read
-
-      code = %{
-        $LOAD_PATH.unshift "#{lib.expand_path}"
-        require 'cond'
-        include Cond
-      } + contents.match(%r!== #{section}.*?\n(.*?)^\S!m)[1]
-
-      expected = code.scan(%r!\# => (.*?)\n!).flatten.join("\n")
-      pipe_to_ruby(code).chomp.should == expected
-    end
-  }
-end
+Jumpstart.doc_to_spec("README.rdoc", "Synopsis", "Raw Form", "Synopsis 2.0")

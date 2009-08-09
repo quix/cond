@@ -105,6 +105,9 @@ http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restart
 See readmes/seibel_pcl.rb for a Ruby translation.
 
 == Synopsis 2.0
+
+  require 'cond'
+  include Cond
   
   x, y = 7, 0
   
