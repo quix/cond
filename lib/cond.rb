@@ -7,9 +7,9 @@ require 'cond/cond_private/defaults'
 # Resolve errors without unwinding the stack.
 # 
 module Cond
-  COND_VERSION = "0.2.2"
-
   module CondPrivate
+    VERSION = "0.2.2"
+
     class MessageProc < Proc
       def initialize(message = "", &block)
         @message = message
