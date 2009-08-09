@@ -7,7 +7,15 @@ readme_file = nil
 Jumpstart.new('cond') do |s|
   s.developer('James M. Lawrence', 'quixoticsycophant@gmail.com')
   s.description_sentences = 2
-  s.rdoc_files = %w[lib/cond.rb]
+  s.rdoc_files = %w[
+    lib/cond/cond.rb
+    lib/cond/dsl_definition.rb
+    lib/cond/error.rb
+    lib/cond/handler.rb
+    lib/cond/message_proc.rb
+    lib/cond/restart.rb
+    lib/cond/wrapping.rb
+  ]
   readme_file = s.readme_file
 end
 

@@ -5,8 +5,7 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 #
 
 require 'pp'
-require 'cond'
-include Cond
+require 'cond/dsl'
 
 class RestartableFetchError < RuntimeError
 end

@@ -3,7 +3,7 @@ require File.dirname(__FILE__) + "/common"
 class ExampleError < RuntimeError
 end
 
-include Cond
+require 'cond/dsl'
 
 describe "basic handler/restart functionality" do
   it "should work using the raw form" do

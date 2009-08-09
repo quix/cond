@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + "/common"
 
-include Cond
+require 'cond/dsl'
 
 describe "singleton method defined in C" do
   before :all do

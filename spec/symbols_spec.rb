@@ -21,7 +21,7 @@ describe "generated symbols" do
     histogram = Hash.new { |hash, key| hash[key] = 0 }
 
     300.times { |n|
-      obj = Cond::CondPrivate::CodeSection.new(:foo)
+      obj = Cond::CodeSection.new(:foo)
       leave, again = obj.instance_eval { [@leave, @again] }
       histogram[leave] += 1
       histogram[again] += 1

@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + "/common"
 
-include Cond
+require 'cond/dsl'
 
 describe "error reporting" do
   it "should raise NoRestartError when restart is not found" do

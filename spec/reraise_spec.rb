@@ -3,7 +3,7 @@ require File.dirname(__FILE__) + "/common"
 class ReraiseExampleError < Exception
 end
 
-include Cond
+require 'cond/dsl'
 
 describe "re-raise" do
   it "should work work with no arguments" do

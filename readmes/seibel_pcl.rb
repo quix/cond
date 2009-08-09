@@ -13,9 +13,8 @@ $LOAD_PATH.unshift "#{File.dirname(__FILE__)}/../lib"
 ##########################################################
 # setup
 
-require 'cond'
+require 'cond/dsl'
 require 'time'
-include Cond
 
 class MalformedLogEntryError < StandardError
 end

@@ -7,8 +7,7 @@ Resolve errors without unwinding the stack.
 
 == Synopsis
 
-  require 'cond'
-  include Cond
+  require 'cond/dsl'
   
   def divide(x, y)
     restartable do
@@ -84,9 +83,8 @@ propagate in the usual unwinding fashion, as if the handler was never
 called.
 
 Cond is 100% compatible with the built-in exception-handling system.
-We may imagine that Ruby had this handler/restart functionality from
-the very beginning, but everyone had forgotten to write restarts.  And
-since no restarts were available, no handlers were written.
+We may imagine that Ruby had always had this handler+restart
+functionality but nobody remembered to use it.
 
 == Background
 
@@ -106,8 +104,7 @@ See readmes/seibel_pcl.rb for a Ruby translation.
 
 == Synopsis 2.0
 
-  require 'cond'
-  include Cond
+  require 'cond/dsl'
   
   x, y = 7, 0
   
@@ -137,14 +134,13 @@ arbitrarily.
 for repetitive catch blocks and prevent symbol collisions for nested
 catch labels.
 
-A default handler is provided which runs a simple choose-a-restart
-input loop when +raise+ is called, as the next example demonstrates.
-
 == Restart Example
 
+A default handler is provided which runs a simple choose-a-restart
+input loop when +raise+ is called.
+
   require 'pp'
-  require 'cond'
-  include Cond
+  require 'cond/dsl'
   
   class RestartableFetchError < RuntimeError
   end
@@ -231,25 +227,24 @@ Cond has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
 Each thread keeps its own list of handlers, restarts, and other data.
 All operations are fully thread-safe.
 
-It is not required to <tt>include Cond</tt>.  The includable methods
-of +Cond+ are <tt>module_function</tt>s and are thus callable via e.g.
-<tt>Cond.handling</tt>.
-
-+Cond+ nests private modules and classes inside Cond::CondPrivate in
-order to improve the hygiene of <tt>include Cond</tt> and encourage
-its use.
-
 Except for the redefinition +raise+, Cond does not silently modify any
 of the standard classes.
 
 The essential implementation is small and simple: it consists of two
 per-thread stacks of hashes (handlers and restarts) with merge-push
-and pop operations.  The syntax shown in the above examples is a thin
-layer concealing the underlying hashes.  It is equivalent to the
-following raw form.  You are free to use either form according to
-preference or circumstance.
+and pop operations.
 
-=== Raw Form
+== DSL Form and Raw Form
+
+The optional <tt>require 'cond/dsl'</tt> defines some pseudo-keywords
+in the global scope which comprise a DSL for the system.  These
+methods are also available with <tt>require 'cond'</tt> through the
+Cond singleton (e.g. Cond.handling) or by including Cond::DSL into the
+class or module which uses them.
+
+The DSL shown in the above examples is a thin layer concealing the
+underlying hashes.  It is equivalent to the following raw form.  You
+are free to use either form according to preference or circumstance.
 
   require 'cond'
   
@@ -279,10 +274,10 @@ preference or circumstance.
     puts divide(7, 0)   # => 42
   end
 
-=== Limitations
+== Limitations
 
 There must be a call to +raise+ inside Ruby code (as opposed to C
-code) for a handler to be invoked.
+code) in order for a handler to be invoked.
 
 The above synopsis gives an example: Why is there a check for division
 by zero when +ZeroDivisionError+ would be raised anyway?  Because

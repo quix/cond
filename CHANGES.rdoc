@@ -1,0 +1,12 @@
+
+= Cond ChangeLog
+
+== Version 0.3.0
+
+* require 'cond/dsl' to get the DSL; no more 'include Cond'
+* internal cleanup
+
+== Version 0.2.1
+
+* initial release
+

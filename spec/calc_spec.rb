@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + "/../spec/common"
 
-include Cond
+require 'cond/dsl'
 
 class DivergedError < StandardError
   attr_reader :epsilon

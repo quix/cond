@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + "/common"
 
-include Cond
+require 'cond/dsl'
 
 [:handling, :restartable].each { |keyword|
   describe "arguments to 'leave' have semantics of 'return'" do

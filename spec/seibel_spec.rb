@@ -1,11 +1,9 @@
-here = File.dirname(__FILE__)
-require here + "/../spec/common"
+require File.dirname(__FILE__) + "/common"
+require 'cond/dsl'
 
-seibel_file = here + "/../readmes/seibel_pcl.rb"
+seibel_file = File.dirname(__FILE__) + "/../readmes/seibel_pcl.rb"
 
-include Cond
-
-if RUBY_VERSION > "1.8.6"
+if RUBY_VERSION >= "1.8.7"
   describe seibel_file do
     it "should run" do
       lambda {

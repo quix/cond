@@ -6,7 +6,7 @@ require File.dirname(__FILE__) + "/../spec/common"
 # 'raise' gets executed.  But for fun let's see what it looks like.
 #
 
-include Cond
+require 'cond/dsl'
 
 module BadExample
   A, B = (1..2).map { Class.new RuntimeError }
