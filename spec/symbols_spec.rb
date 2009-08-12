@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/common"
+require File.dirname(__FILE__) + '/cond_spec_base'
 
 #
 # Try to demonstrate symbol recycling by calling GC.start on each pass

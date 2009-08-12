@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/../spec/common"
+require File.dirname(__FILE__) + '/cond_spec_base'
 
 #
 # This is a bad example because a handler should re-raise if no

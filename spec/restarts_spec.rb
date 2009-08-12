@@ -1,10 +1,8 @@
-here = File.dirname(__FILE__)
-require here + "/../spec/common"
+require File.dirname(__FILE__) + '/cond_spec_base'
 
-$LOAD_PATH.unshift "devel"
-require 'jumpstart/ruby'
+require 'jumpstart'
 
-RESTARTS_FILE = here + "/../readmes/restarts.rb"
+RESTARTS_FILE = File.dirname(__FILE__) + '/../readmes/restarts.rb'
 
 def run_restarts(input_string)
   capture(input_string) {

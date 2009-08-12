@@ -1,22 +1,272 @@
-$LOAD_PATH.unshift File.dirname(__FILE__) + '/../lib'
-$LOAD_PATH.unshift File.dirname(__FILE__)
-
-require 'rubygems'
-require 'rbconfig'
-
-require 'rake/gempackagetask'
-require 'rake/clean'
-
-require 'jumpstart/ruby'
-require 'jumpstart/attr_lazy'
-require 'jumpstart/simple_installer'
-require 'jumpstart/util'
 
 class Jumpstart
+  class SimpleInstaller
+    def initialize
+      require 'fileutils'
+      require 'rbconfig'
+      require 'find'
+      dest_root = Config::CONFIG["sitelibdir"]
+      sources = []
+      Find.find("./lib") { |source|
+        if install_file?(source)
+          sources << source
+        end
+      }
+      @spec = sources.inject(Array.new) { |acc, source|
+        if source == "./lib"
+          acc
+        else
+          dest = File.join(dest_root, source.sub(%r!\A\./lib!, ""))
+  
+          install = lambda {
+            if File.directory?(source)
+              unless File.directory?(dest)
+                puts "mkdir #{dest}"
+                FileUtils.mkdir(dest)
+              end
+            else
+              puts "install #{source} --> #{dest}"
+              FileUtils.install(source, dest)
+            end
+          }
+            
+          uninstall = lambda {
+            if File.directory?(source)
+              if File.directory?(dest)
+                puts "rmdir #{dest}"
+                FileUtils.rmdir(dest)
+              end
+            else
+              if File.file?(dest)
+                puts "rm #{dest}"
+                FileUtils.rm(dest)
+              end
+            end
+          }
+  
+          acc << {
+            :source => source,
+            :dest => dest,
+            :install => install,
+            :uninstall => uninstall,
+          }
+        end
+      }
+    end
+  
+    def install_file?(source)
+      File.directory?(source) or
+      (File.file?(source) and File.extname(source) == ".rb")
+    end
+
+    def install
+      @spec.each { |entry|
+        entry[:install].call
+      }
+    end
+  
+    def uninstall
+      @spec.reverse.each { |entry|
+        entry[:uninstall].call
+      }
+    end
+
+    def run(args = ARGV)
+      if args.empty?
+        install
+      elsif args.size == 1 and args.first == "--uninstall"
+        uninstall
+      else
+        raise "unrecognized arguments: #{args.inspect}"
+      end
+    end
+  end
+
+  module AttrLazy
+    def attr_lazy(name, &block)
+      AttrLazy.define_reader(class << self ; self ; end, name, &block)
+    end
+
+    def attr_lazy_accessor(name, &block)
+      attr_lazy(name, &block)
+      AttrLazy.define_writer(class << self ; self ; end, name, &block)
+    end
+
+    class << self
+      def included(mod)
+        (class << mod ; self ; end).class_eval do
+          def attr_lazy(name, &block)
+            AttrLazy.define_reader(self, name, &block)
+          end
+
+          def attr_lazy_accessor(name, &block)
+            attr_lazy(name, &block)
+            AttrLazy.define_writer(self, name, &block)
+          end
+        end
+      end
+
+      def define_evaluated_reader(instance, name, value)
+        (class << instance ; self ; end).class_eval do
+          remove_method name rescue nil
+          define_method name do
+            value
+          end
+        end
+      end
+
+      def define_reader(klass, name, &block)
+        klass.class_eval do
+          remove_method name rescue nil
+          define_method name do
+            value = instance_eval(&block)
+            AttrLazy.define_evaluated_reader(self, name, value)
+            value
+          end
+        end
+      end
+
+      def define_writer(klass, name, &block)
+        klass.class_eval do
+          writer = "#{name}="
+          remove_method writer rescue nil
+          define_method writer do |value|
+            AttrLazy.define_evaluated_reader(self, name, value)
+            value
+          end
+        end
+      end
+    end
+  end
+
+  module Ruby
+    module_function
+
+    def executable
+      require 'rbconfig'
+
+      name = File.join(
+        Config::CONFIG["bindir"],
+        Config::CONFIG["RUBY_INSTALL_NAME"]
+      )
+
+      if Config::CONFIG["host"] =~ %r!(mswin|cygwin|mingw)! and
+          File.basename(name) !~ %r!\.(exe|com|bat|cmd)\Z!i
+        name + Config::CONFIG["EXEEXT"]
+      else
+        name
+      end
+    end
+
+    def run(*args)
+      cmd = [executable, *args]
+      unless system(*cmd)
+        cmd_str = cmd.map { |t| "'#{t}'" }.join(", ")
+        raise "system(#{cmd_str}) failed with status #{$?.exitstatus}"
+      end
+    end
+
+    def run_code_and_capture(code)
+      IO.popen(%{"#{executable}"}, "r+") { |pipe|
+        pipe.print(code)
+        pipe.flush
+        pipe.close_write
+        pipe.read
+      }
+    end
+
+    def run_file_and_capture(file)
+      unless File.file? file
+        raise "file does not exist: `#{file}'"
+      end
+      IO.popen(%{"#{executable}" "#{file}"}, "r") { |pipe|
+        pipe.read
+      }
+    end
+      
+    def with_warnings(value = true)
+      previous = $VERBOSE
+      $VERBOSE = value
+      begin
+        yield
+      ensure
+        $VERBOSE = previous
+      end
+    end
+      
+    def no_warnings(&block)
+      with_warnings(nil, &block)
+    end
+  end
+
+  module Util
+    module_function
+
+    def run_ruby_on_each(*files)
+      files.each { |file|
+        Ruby.run("-w", file)
+      }
+    end
+
+    def to_camel_case(str)
+      str.split('_').map { |t| t.capitalize }.join
+    end
+
+    def write_file(file)
+      contents = yield
+      File.open(file, "wb") { |out|
+        out.print(contents)
+      }
+      contents
+    end
+
+    def replace_file(file)
+      old_contents = File.read(file)
+      new_contents = yield(old_contents)
+      if old_contents != new_contents
+        File.open(file, "wb") { |output|
+          output.print(new_contents)
+        }
+      end
+      new_contents
+    end
+  end
+
+  module InstanceEvalWithArgs
+    module_function
+
+    def with_temp_method(instance, method_name, method_block)
+      (class << instance ; self ; end).class_eval do
+        define_method(method_name, &method_block)
+        begin
+          yield method_name
+        ensure
+          remove_method(method_name)
+        end
+      end
+    end
+
+    def call_temp_method(instance, method_name, *args, &method_block)
+      with_temp_method(instance, method_name, method_block) {
+        instance.send(method_name, *args)
+      }
+    end
+
+    def instance_eval_with_args(instance, *args, &block)
+      call_temp_method(instance, :__temp_method, *args, &block)
+    end
+  end
+
   include AttrLazy
   include Util
 
   def initialize(project_name)
+    $LOAD_PATH.unshift File.dirname(__FILE__) + '/../lib'
+    $LOAD_PATH.unshift File.dirname(__FILE__)
+
+    require 'rake/gempackagetask'
+    require 'rake/clean'
+
     @project_name = project_name
 
     yield self
@@ -161,6 +411,7 @@ class Jumpstart
   end
 
   attribute :browser do
+    require 'rbconfig'
     if Config::CONFIG["host"] =~ %r!darwin!
       app = %w[Firefox Safari].map { |t|
         "/Applications/#{t}.app"
@@ -458,6 +709,7 @@ class Jumpstart
       end
 
       def debug_info(enable)
+        require 'find'
         Find.find("lib", "test") { |path|
           if path =~ %r!\.rb\Z!
             replace_file(path) { |contents|
@@ -520,6 +772,7 @@ class Jumpstart
 
   def define_ping
     task :ping do
+      require 'rbconfig'
       %w[github.com rubyforge.org].each { |server|
         cmd = "ping " + (
           if Config::CONFIG["host"] =~ %r!darwin!
@@ -561,18 +814,18 @@ class Jumpstart
     }
   end
 
-  def rubyforge(file, *command)
-    args = %w[rubyforge] + command + [
+  def rubyforge(mode, file, *options)
+    command = ["rubyforge", mode] + options + [
       rubyforge_name,
       rubyforge_name,
       version.to_s,
       file,
     ]
-    sh(*args)
+    sh(*command)
   end
 
   def define_release
-    task :prerelease => [:clean, :check_directory, :ping]
+    task :prerelease => [:clean, :check_directory, :ping, history_file]
 
     task :finish_release do
       gem_md5, tgz_md5 = [gem, tgz].map { |file|
@@ -581,11 +834,12 @@ class Jumpstart
         md5
       }
 
-      rubyforge(gem, "add_release")
+      rubyforge(
+        "add_release", gem, "--release_changes", history_file, "--preformatted"
+      )
       [gem_md5, tgz, tgz_md5].each { |file|
-        rubyforge(file, "add_file")
+        rubyforge("add_file", file)
       }
-      rubyforge(history_file, "release_changes", "--release_changes")
 
       git("tag", "#{name}-" + version.to_s)
       git(*%w(push --tags origin master))
@@ -606,8 +860,25 @@ class Jumpstart
 
   class << self
     include Util
+    include InstanceEvalWithArgs
 
-    def run_doc_code(code, expected, transformer, index)
+    # From minitest, part of the Ruby source; by Ryan Davis.
+    def capture_io
+      require 'stringio'
+
+      orig_stdout, orig_stderr         = $stdout, $stderr
+      captured_stdout, captured_stderr = StringIO.new, StringIO.new
+      $stdout, $stderr                 = captured_stdout, captured_stderr
+
+      yield
+
+      return captured_stdout.string, captured_stderr.string
+    ensure
+      $stdout = orig_stdout
+      $stderr = orig_stderr
+    end
+
+    def run_doc_code(code, expected, index, instance, &block)
       lib = File.expand_path(File.dirname(__FILE__) + "/../lib")
       header = %{
         $LOAD_PATH.unshift "#{lib}"
@@ -621,26 +892,19 @@ class Jumpstart
       }
       final_code = header + code + footer
 
+      # Sometimes code is required to be inside a file.
       actual = nil
       require 'tempfile'
       Tempfile.open("run-rdoc-code") { |temp_file|
         temp_file.print(final_code)
         temp_file.close
-        result = `"#{::Jumpstart::Ruby::EXECUTABLE}" "#{temp_file.path}"`
-        unless $?.exitstatus == 0
-          raise "failed to run ruby"
-        end
-        actual = result.chomp
+        actual = Ruby.run_file_and_capture(temp_file.path).chomp
       }
 
-      if transformer
-        transformer.call(expected, actual, index)
-      else
-        [expected, actual]
-      end
+      instance_eval_with_args(instance, expected, actual, index, &block)
     end
 
-    def run_doc_section(file, section, transformer)
+    def run_doc_section(file, section, instance, &block)
       contents = File.read(file)
       if section_contents = contents[%r!^=+[ \t]#{section}.*?\n(.*?)^=!m, 1]
         index = 0
@@ -656,7 +920,7 @@ class Jumpstart
               raise "parse error"
             end
           )
-          yield run_doc_code(code, expected, transformer, index)
+          run_doc_code(code, expected, index, instance, &block)
           index += 1
         }
       else
@@ -670,9 +934,14 @@ class Jumpstart
         sections.each { |section|
           describe "section `#{section}'" do
             it "should run as claimed" do
-              jump.run_doc_section(file, section, block) { |expected, actual|
-                actual.should == expected
-              }
+              if block
+                jump.run_doc_section(file, section, self, &block)
+              else
+                jump.run_doc_section(file, section, self) {
+                  |expected, actual, index|
+                  actual.should == expected
+                }
+              end
             end
           end
         }
@@ -684,15 +953,18 @@ class Jumpstart
       klass = Class.new Test::Unit::TestCase do
         sections.each { |section|
           define_method "test_#{file}_#{section}" do
-            jump.run_doc_section(file, section, block) { |expected, actual|
-              assert_equal expected, actual
-            }
+            if block
+              jump.run_doc_section(file, section, self, &block)
+            else
+              jump.run_doc_section(file, section, self) {
+                |expected, actual, index|
+                assert_equal expected, actual
+              }
+            end
           end
         }
       end
-      # minitest fails without a const name in 1.9
       Object.const_set("Test#{file}".gsub(".", ""), klass)
     end
   end
 end
-

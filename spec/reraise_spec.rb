@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/common"
+require File.dirname(__FILE__) + '/cond_spec_base'
 
 class ReraiseExampleError < Exception
 end

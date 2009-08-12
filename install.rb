@@ -1,3 +1,2 @@
-$LOAD_PATH.unshift "devel"
-require 'jumpstart/simple_installer'
+load './devel/jumpstart.rb'
 Jumpstart::SimpleInstaller.new.run

@@ -7,18 +7,7 @@ require 'spec/autorun'
 # NOTE: In jruby this must come after require 'rubygems'
 require 'cond'
 
-require 'pathname'
 require 'stringio'
-
-def pipe_to_ruby(code)
-  require 'jumpstart/ruby'
-  IO.popen(%{"#{Jumpstart::Ruby::EXECUTABLE}"}, "r+") { |pipe|
-    pipe.puts code
-    pipe.flush
-    pipe.close_write
-    pipe.read
-  }
-end
 
 def capture(input_string)
   previous = [

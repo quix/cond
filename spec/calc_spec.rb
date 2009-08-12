@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/../spec/common"
+require File.dirname(__FILE__) + '/cond_spec_base'
 
 require 'cond/dsl'
 
