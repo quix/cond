@@ -470,9 +470,10 @@ class Jumpstart
   end
   
   attribute :sections do
+    require 'enumerator'
     begin
-      pairs = Hash[*readme_contents.split(%r!^== (\w+).*?$!)[1..-1]].map {
-        |section, contents|
+      data = readme_contents.split(%r!^==\s*(.*?)\s*$!)
+      pairs = data[1..-1].enum_slice(2).map { |section, contents|
         [section.downcase, contents.strip]
       }
       Hash[*pairs.flatten]
@@ -906,7 +907,8 @@ class Jumpstart
 
     def run_doc_section(file, section, instance, &block)
       contents = File.read(file)
-      if section_contents = contents[%r!^=+[ \t]#{section}.*?\n(.*?)^=!m, 1]
+      re = %r!^=+[ \t]#{Regexp.quote(section)}.*?\n(.*?)^=!m
+      if section_contents = contents[re, 1]
         index = 0
         section_contents.scan(%r!^(  \S.*?)(?=(^\S|\Z))!m) { |indented, unused|
           code_sections = indented.split(%r!^  \#\#\#\# output:\s*$!)
