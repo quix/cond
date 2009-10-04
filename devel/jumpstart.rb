@@ -564,7 +564,9 @@ class Jumpstart
 
   def define_spec
     unless spec_files.empty?
-      require 'spec/rake/spectask'
+      Ruby.no_warnings {
+        require 'spec/rake/spectask'
+      }
       
       desc "run specs"
       Spec::Rake::SpecTask.new('spec') do |t|
@@ -585,6 +587,8 @@ class Jumpstart
         t.spec_opts = ["-fh:#{spec_output}"]
       end
       
+      suppress_task_warnings :spec, :full_spec, :text_spec
+
       desc "run full_spec then open browser"
       task :show_spec => :full_spec do
         open_browser(spec_output, rcov_dir + "/index.html")
@@ -857,6 +861,18 @@ class Jumpstart
   
   def open_browser(*files)
     sh(*([browser].flatten + files))
+  end
+
+  def suppress_task_warnings(*task_names)
+    task_names.each { |task_name|
+      Rake::Task[task_name].actions.map! { |action|
+        lambda { |*args|
+          Ruby.no_warnings {
+            action.call(*args)
+          }
+        }
+      }
+    }
   end
 
   class << self
