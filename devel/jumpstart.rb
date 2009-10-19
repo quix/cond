@@ -899,7 +899,6 @@ class Jumpstart
       lib = File.expand_path(File.dirname(__FILE__) + "/../lib")
       header = %{
         $LOAD_PATH.unshift "#{lib}"
-        require 'rubygems'
         begin
       }
       footer = %{
