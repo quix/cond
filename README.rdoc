@@ -222,7 +222,8 @@ Translated to Ruby from http://c2.com/cgi/wiki?LispRestartExample
 
 == Technical Notes
 
-Cond has been tested on MRI 1.8.6, 1.8.7, 1.9, and the latest jruby.
+Cond has been tested on MRI 1.8.6, 1.8.7, 1.9.1, 1.9.2, and
+jruby-1.4.
 
 Each thread keeps its own list of handlers, restarts, and other data.
 All operations are fully thread-safe.
