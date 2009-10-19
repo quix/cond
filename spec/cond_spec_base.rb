@@ -1,12 +1,8 @@
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../lib"
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/../devel"
 
-require 'rubygems'
-require 'spec/autorun'
-
-# NOTE: In jruby this must come after require 'rubygems'
 require 'cond'
-
+require 'spec/autorun'
 require 'stringio'
 
 def capture(input_string)
