@@ -32,8 +32,10 @@ Resolve errors without unwinding the stack.
 == Install
 
   % gem install cond
-or
-  % ruby install.rb [--uninstall]
+
+Or from the (non-gem) .tgz package,
+
+  % rake install
 
 == Description
 
@@ -85,6 +87,13 @@ called.
 Cond is 100% compatible with the built-in exception-handling system.
 We may imagine that Ruby had always had this handler+restart
 functionality but nobody remembered to use it.
+
+== Links
+
+* Home: http://quix.github.com/cond
+* Feature Requests, Bug Reports: http://github.com/quix/cond/issues
+* Manual Download: http://github.com/quix/cond/archives/master
+* Repository: http://github.com/quix/cond
 
 == Background
 

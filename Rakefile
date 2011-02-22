@@ -5,8 +5,8 @@ require 'jumpstart'
 readme_file = nil
  
 Jumpstart.new('cond') do |s|
-  s.developer('James M. Lawrence', 'quixoticsycophant@gmail.com')
-  s.rubyforge_user = "quix"
+  s.developers << ['James M. Lawrence', 'quixoticsycophant@gmail.com']
+  s.github_user = "quix"
   s.description_sentences = 2
   s.rdoc_files = %w[
     lib/cond/cond.rb
