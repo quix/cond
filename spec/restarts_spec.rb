@@ -1,12 +1,12 @@
 require File.dirname(__FILE__) + '/cond_spec_base'
 
-require 'jumpstart'
+require 'levitate'
 
 RESTARTS_FILE = File.dirname(__FILE__) + '/../readmes/restarts.rb'
 
 def run_restarts(input_string)
   capture(input_string) {
-    Jumpstart::Ruby.no_warnings {
+    Levitate.no_warnings {
       load RESTARTS_FILE
     }
   }

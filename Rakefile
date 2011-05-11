@@ -1,13 +1,18 @@
 $LOAD_PATH.unshift "devel"
 
-require 'jumpstart'
+require 'levitate'
 
 readme_file = nil
  
-Jumpstart.new('cond') do |s|
+Levitate.new "cond" do |s|
   s.developers << ['James M. Lawrence', 'quixoticsycophant@gmail.com']
-  s.github_user = "quix"
+  s.username = "quix"
+  s.rubyforge_info = ["quix", "cond"]
   s.description_sentences = 2
+  s.development_dependencies = [
+    ["rspec", "~> 1.3.0"],
+  ]
+
   s.rdoc_files = %w[
     lib/cond/cond.rb
     lib/cond/dsl_definition.rb
