@@ -1,0 +1,277 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang='en'>
+  <head>
+    <title>README.rdoc</title>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <link href='../css/style.css' media='screen' rel='stylesheet' type='text/css'>
+    <script type='text/javascript'>
+      //<![CDATA[
+        function popupCode(url) {
+          window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+        }
+        
+        function toggleCode(id) {
+          var code = document.getElementById(id)
+        
+          code.style.display = code.style.display != 'block' ? 'block' : 'none'
+          return true
+        }
+        
+        // Make codeblocks hidden by default
+        document.writeln('<' + 'style type="text/css">.method .source pre { display: none }<\/style>')
+      //]]>
+    </script>
+  </head>
+  <body class='page'>
+    <div class='file' id='wrapper'>
+      <div class='header'>
+            <div class='name'>README.rdoc</div>
+            <div class='paths'>
+              README.rdoc
+            </div>
+            <div class='last-update'>
+              Last Update:
+              <span class='datetime'>2011-07-31 20:30:30 -0400</span>
+            </div>
+          </div>
+          <div id='content'>
+            <div id='text'>
+              <div id='description'>
+                <h1><a href="../classes/Cond.html">Cond</a></h1>
+                <h2>Summary</h2>
+                <p>
+                Resolve errors without unwinding the stack.
+                </p>
+                <h2>Synopsis</h2>
+                <pre>require 'cond/dsl'&#x000A;&#x000A;def divide(x, y)&#x000A;  restartable do&#x000A;    restart :return_this_instead do |value|&#x000A;      return value&#x000A;    end&#x000A;    raise ZeroDivisionError if y == 0&#x000A;    x/y&#x000A;  end&#x000A;end&#x000A;&#x000A;handling do&#x000A;  handle ZeroDivisionError do&#x000A;    invoke_restart :return_this_instead, 42&#x000A;  end&#x000A;  puts divide(10, 2)  # =&gt; 5&#x000A;  puts divide(18, 3)  # =&gt; 6&#x000A;  puts divide(4, 0)   # =&gt; 42&#x000A;  puts divide(7, 0)   # =&gt; 42&#x000A;end</pre>
+                <h2>Install</h2>
+                <pre>% gem install cond</pre>
+                <p>
+                Or from inside an unpacked .tgz download, <tt>rake install</tt> / <tt>rake
+                uninstall</tt>.
+                </p>
+                <h2>Description</h2>
+                <p>
+                <a href="../classes/Cond.html">Cond</a> allows errors to be handled near
+                the place where they occur, before the stack unwinds.  It offers several
+                advantages over exceptions while peacefully coexisting with the standard
+                exception behavior.
+                </p>
+                <p>
+                The system is divided into two parts: <em>restarts</em> and
+                <em>handlers</em>.  When <tt>raise</tt> is called and there is a matching
+                handler for the error, the normal mechanism of unwinding the stack is
+                suspended while the handler is called instead.  At this time, the handler
+                may invoke one of the available restarts.
+                </p>
+                <pre>(1) program start (stack begin) --&gt; +&#x000A;                                    |&#x000A;                                    |&#x000A;                                    |&#x000A;                                    |&lt;-- handler_a &#x000A;                                    |&#x000A;   (2) handlers are set up -------&gt; |&lt;-- handler_b &#x000A;                                    |&#x000A;                                    |&lt;-- handler_c -----+&#x000A;                                    |       .           |&#x000A;                                    |      /|\          |&#x000A;                                    |       |           |&#x000A;                                    |       |           | (5) handler &#x000A;                                    |       |           |     calls&#x000A;                                    |       |           |     restart&#x000A;                                    |       |           |&#x000A;           +---------&gt;------------- | ------+           |&#x000A;           |                        |  (4) exception    |&#x000A;           |                        |      sent to      |&#x000A;           |                        |      handler      |&#x000A;           |                        |                   |&#x000A;           |                        |                   |&#x000A;           |                        |&lt;-- restart_x      |&#x000A;           ^                        |                   |&#x000A;                                    |&lt;-- restart_y &lt;----+&#x000A; (3) raise called here here ------&gt; |&#x000A;                                    +&lt;-- restart_z</pre>
+                <p>
+                A handler may find a way to negate the problem and, by invoking a restart,
+                allow execution to continue from a place proximal to where <tt>raise</tt>
+                was called.  Or a handler may choose to allow the exception to propagate in
+                the usual unwinding fashion, as if the handler was never called.
+                </p>
+                <p>
+                <a href="../classes/Cond.html">Cond</a> is 100% compatible with the
+                built-in exception-handling system. We may imagine that Ruby had always had
+                this handler+restart functionality but nobody remembered to use it.
+                </p>
+                <h2>Links</h2>
+                <ul>
+                <li><p>
+                Home: <a target="_top" href="http://quix.github.com/cond">quix.github.com/cond</a>
+                </p>
+                </li>
+                <li><p>
+                Feature Requests, Bug Reports: <a
+                href="http://github.com/quix/cond/issues">github.com/quix/cond/issues</a>
+                </p>
+                </li>
+                <li><p>
+                Manual Download: <a
+                href="http://github.com/quix/cond/archives/master">github.com/quix/cond/archives/master</a>
+                </p>
+                </li>
+                <li><p>
+                Repository: <a target="_top" href="http://github.com/quix/cond">github.com/quix/cond</a>
+                </p>
+                </li>
+                </ul>
+                <h2>Background</h2>
+                <p>
+                <a href="../classes/Cond.html">Cond</a> is stolen from the Common Lisp
+                condition system.
+                </p>
+                <p>
+                Peter Seibel discusses the advantages of handlers and restarts in the
+                following video.  I have fast-forwarded to the most relevant part, though
+                the whole talk is worthwhile.
+                </p>
+                <p>
+                <a
+                href="http://video.google.com/videoplay?docid=448441135356213813#46m07s">video.google.com/videoplay?docid=448441135356213813#46m07s</a>
+                </p>
+                <p>
+                The example he shows is taken from his book on Lisp,
+                </p>
+                <p>
+                <a
+                href="http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html">www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html</a>
+                </p>
+                <p>
+                See readmes/seibel_pcl.rb for a Ruby translation.
+                </p>
+                <h2>Synopsis 2.0</h2>
+                <pre>require 'cond/dsl'&#x000A;&#x000A;x, y = 7, 0&#x000A;&#x000A;handling do&#x000A;  handle ZeroDivisionError do |exception|&#x000A;    invoke_restart :return_this_instead, 42&#x000A;  end&#x000A;&#x000A;  result = restartable do&#x000A;    restart :return_this_instead do |value|&#x000A;      leave value&#x000A;    end&#x000A;&#x000A;    raise ZeroDivisionError if y == 0&#x000A;    x/y&#x000A;  end&#x000A;&#x000A;  puts result  # =&gt; 42&#x000A;end</pre>
+                <p>
+                <tt>leave</tt> acts like <tt>return</tt> for the current <tt>handling</tt>
+                or <tt>restartable</tt> block.  Its counterpart is <tt>again</tt>, which
+                acts like <tt>redo</tt> for the current <tt>handling</tt> or
+                <tt>restartable</tt> block.  These blocks may be nested arbitrarily.
+                </p>
+                <p>
+                <tt>leave</tt> and <tt>again</tt> are for convenience only.  They remove
+                the need for repetitive catch blocks and prevent symbol collisions for
+                nested catch labels.
+                </p>
+                <h2>Restart Example</h2>
+                <p>
+                A default handler is provided which runs a simple choose-a-restart input
+                loop when <tt>raise</tt> is called.
+                </p>
+                <pre>require 'pp'&#x000A;require 'cond/dsl'&#x000A;&#x000A;class RestartableFetchError &lt; RuntimeError&#x000A;end&#x000A;&#x000A;def read_new_value(what)&#x000A;  print(&quot;Enter a new #{what}: &quot;)&#x000A;  eval($stdin.readline.chomp)&#x000A;end&#x000A;&#x000A;def restartable_fetch(hash, key, default = nil)&#x000A;  restartable do&#x000A;    restart :continue, &quot;Return not having found the value.&quot; do&#x000A;      return default&#x000A;    end&#x000A;    restart :try_again, &quot;Try getting the key from the hash again.&quot; do&#x000A;      again&#x000A;    end&#x000A;    restart :use_new_key, &quot;Use a new key.&quot; do&#x000A;      key = read_new_value(&quot;key&quot;)&#x000A;      again&#x000A;    end&#x000A;    restart :use_new_hash, &quot;Use a new hash.&quot; do&#x000A;      hash = read_new_value(&quot;hash&quot;)&#x000A;      again&#x000A;    end&#x000A;    hash.fetch(key) {&#x000A;      raise RestartableFetchError,&#x000A;        &quot;Error getting #{key.inspect} from:\n#{hash.pretty_inspect}&quot;&#x000A;    }&#x000A;  end&#x000A;end&#x000A;&#x000A;fruits_and_vegetables = Hash[*%w[&#x000A;   apple fruit&#x000A;   orange fruit&#x000A;   lettuce vegetable&#x000A;   tomato depends_on_who_you_ask&#x000A;]]&#x000A;&#x000A;Cond.with_default_handlers {&#x000A;  puts(&quot;value: &quot; + restartable_fetch(fruits_and_vegetables, &quot;mango&quot;).inspect)&#x000A;}&#x000A;</pre>
+                <p>
+                Run:
+                </p>
+                <pre>% ruby readmes/restarts.rb&#x000A;readmes/restarts.rb:49:in `&lt;main&gt;'&#x000A;Error getting &quot;mango&quot; from:&#x000A;{&quot;apple&quot;=&gt;&quot;fruit&quot;,&#x000A; &quot;orange&quot;=&gt;&quot;fruit&quot;,&#x000A; &quot;lettuce&quot;=&gt;&quot;vegetable&quot;,&#x000A; &quot;tomato&quot;=&gt;&quot;depends_on_who_you_ask&quot;}&#x000A;&#x000A;  0: Return not having found the value. (:continue)&#x000A;  1: Try getting the key from the hash again. (:try_again)&#x000A;  2: Use a new hash. (:use_new_hash)&#x000A;  3: Use a new key. (:use_new_key)&#x000A;Choose number: 3&#x000A;Enter a new key: &quot;apple&quot;&#x000A;value: &quot;fruit&quot;&#x000A;&#x000A;% ruby readmes/restarts.rb&#x000A;readmes/restarts.rb:49:in `&lt;main&gt;'&#x000A;Error getting &quot;mango&quot; from:&#x000A;{&quot;apple&quot;=&gt;&quot;fruit&quot;,&#x000A; &quot;orange&quot;=&gt;&quot;fruit&quot;,&#x000A; &quot;lettuce&quot;=&gt;&quot;vegetable&quot;,&#x000A; &quot;tomato&quot;=&gt;&quot;depends_on_who_you_ask&quot;}&#x000A;&#x000A;  0: Return not having found the value. (:continue)&#x000A;  1: Try getting the key from the hash again. (:try_again)&#x000A;  2: Use a new hash. (:use_new_hash)&#x000A;  3: Use a new key. (:use_new_key)&#x000A;Choose number: 2&#x000A;Enter a new hash: { &quot;mango&quot; =&gt; &quot;mangoish fruit&quot; }&#x000A;value: &quot;mangoish fruit&quot;</pre>
+                <p>
+                Translated to Ruby from <a
+                href="http://c2.com/cgi/wiki?LispRestartExample">c2.com/cgi/wiki?LispRestartExample</a>
+                </p>
+                <h2>Technical Notes</h2>
+                <p>
+                <a href="../classes/Cond.html">Cond</a> has been tested on MRI 1.8.6,
+                1.8.7, 1.9.1, 1.9.2, and jruby-1.4.
+                </p>
+                <p>
+                Each thread keeps its own list of handlers, restarts, and other data. All
+                operations are fully thread-safe.
+                </p>
+                <p>
+                Except for the redefinition <tt>raise</tt>, <a
+                href="../classes/Cond.html">Cond</a> does not silently modify any of the
+                standard classes.
+                </p>
+                <p>
+                The essential implementation is small and simple: it consists of two
+                per-thread stacks of hashes (handlers and restarts) with merge-push and pop
+                operations.
+                </p>
+                <h2>DSL Form and Raw Form</h2>
+                <p>
+                The optional <tt>require 'cond/dsl'</tt> defines some pseudo-keywords in
+                the global scope which comprise a DSL for the system.  These methods are
+                also available with <tt>require 'cond'</tt> through the <a
+                href="../classes/Cond.html">Cond</a> singleton (e.g. Cond.handling) or by
+                including <a href="../classes/Cond/DSL.html">Cond::DSL</a> into the class
+                or module which uses them.
+                </p>
+                <p>
+                The DSL shown in the above examples is a thin layer concealing the
+                underlying hashes.  It is equivalent to the following raw form.  You are
+                free to use either form according to preference or circumstance.
+                </p>
+                <pre>require 'cond'&#x000A;&#x000A;def divide(x, y)&#x000A;  restarts = {&#x000A;    :return_this_instead =&gt; lambda { |value|&#x000A;      throw :leave, value&#x000A;    }&#x000A;  }&#x000A;  catch :leave do&#x000A;    Cond.with_restarts restarts do&#x000A;      raise ZeroDivisionError if y == 0&#x000A;      x/y&#x000A;    end&#x000A;  end&#x000A;end&#x000A;&#x000A;handlers = {&#x000A;  ZeroDivisionError =&gt; lambda { |exception|&#x000A;    Cond.invoke_restart :return_this_instead, 42&#x000A;  }&#x000A;}&#x000A;Cond.with_handlers handlers do&#x000A;  puts divide(10, 2)  # =&gt; 5&#x000A;  puts divide(18, 3)  # =&gt; 6&#x000A;  puts divide(4, 0)   # =&gt; 42&#x000A;  puts divide(7, 0)   # =&gt; 42&#x000A;end</pre>
+                <h2>Limitations</h2>
+                <p>
+                There must be a call to <tt>raise</tt> inside Ruby code (as opposed to C
+                code) in order for a handler to be invoked.
+                </p>
+                <p>
+                The above synopsis gives an example: Why is there a check for division by
+                zero when <tt>ZeroDivisionError</tt> would be raised anyway?  Because
+                <tt>Fixnum#/</tt> is written in C.
+                </p>
+                <p>
+                It is still possible for handlers to intercept these raises, but it
+                requires redefining a wrapped version of the method in question:
+                </p>
+                <pre>Cond.wrap_instance_method(Fixnum, :/)</pre>
+                <p>
+                Once this has been called, the line
+                </p>
+                <pre>raise ZeroDivisionError if y == 0</pre>
+                <p>
+                is unnecessary.
+                </p>
+                <p>
+                It is possible remove this limitation by modifying the Ruby interpreter to
+                call Kernel#raise dynamically.
+                </p>
+                <h2>Links</h2>
+                <ul>
+                <li><p>
+                Documentation: <a target="_top" href="http://cond.rubyforge.org">cond.rubyforge.org</a>
+                </p>
+                </li>
+                <li><p>
+                Rubyforge home: <a
+                href="http://rubyforge.org/projects/cond/">rubyforge.org/projects/cond/</a>
+                </p>
+                </li>
+                <li><p>
+                Download: <a
+                href="http://rubyforge.org/frs/?group_id=7916">rubyforge.org/frs/?group_id=7916</a>
+                </p>
+                </li>
+                <li><p>
+                Repository: <a
+                href="http://github.com/quix/cond/tree/master">github.com/quix/cond/tree/master</a>
+                </p>
+                </li>
+                </ul>
+                <h2>Author</h2>
+                <ul>
+                <li><p>
+                James M. Lawrence < quixoticsycophant@gmail.com >
+                </p>
+                </li>
+                </ul>
+                <h2>License</h2>
+                <p>
+                Copyright &#169; 2009 James M. Lawrence.  All rights reserved.
+                </p>
+                <p>
+                Permission is hereby granted, free of charge, to any person obtaining a
+                copy of this software and associated documentation files (the
+                &#8216;Software&#8217;), to deal in the Software without restriction,
+                including without limitation the rights to use, copy, modify, merge,
+                publish, distribute, sublicense, and/or sell copies of the Software, and to
+                permit persons to whom the Software is furnished to do so, subject to the
+                following conditions:
+                </p>
+                <p>
+                The above copyright notice and this permission notice shall be included in
+                all copies or substantial portions of the Software.
+                </p>
+                <p>
+                THE SOFTWARE IS PROVIDED &#8216;AS IS&#8217;, WITHOUT WARRANTY OF ANY KIND,
+                EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+                MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+                NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+                DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+                OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+                USE OR OTHER DEALINGS IN THE SOFTWARE.
+                </p>
+              </div>
+              <div id='context'>
+              </div>
+            </div>
+          </div>
+      <div id='footer-push'></div>
+    </div>
+    <div id='footer'>
+      <a target="docwin" href="http://github.com/mislav/hanna/tree/master"><strong>Hanna</strong> RDoc template</a>
+    </div>
+  </body>
+</html>

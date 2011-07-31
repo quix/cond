@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang='en'>
+  <head>
+    <title>Cond::Wrapping</title>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <link href='../../css/style.css' media='screen' rel='stylesheet' type='text/css'>
+    <script type='text/javascript'>
+      //<![CDATA[
+        function popupCode(url) {
+          window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+        }
+        
+        function toggleCode(id) {
+          var code = document.getElementById(id)
+        
+          code.style.display = code.style.display != 'block' ? 'block' : 'none'
+          return true
+        }
+        
+        // Make codeblocks hidden by default
+        document.writeln('<' + 'style type="text/css">.method .source pre { display: none }<\/style>')
+      //]]>
+    </script>
+  </head>
+  <body class='page'>
+    <div class='class' id='wrapper'>
+      <div class='header'>
+            <h1 class='name'>
+              <span class='type'>module</span>
+              Cond::Wrapping
+            </h1>
+            <ol class='paths'>
+              <li>
+                <a target="docwin" href="../../files/lib/cond/wrapping_rb.html">lib/cond/wrapping.rb</a>
+              </li>
+            </ol>
+            <div class='parent'>
+              Parent:
+              <strong><a target="docwin" href="../Cond.html">Cond</a></strong>
+            </div>
+          </div>
+          <div id='content'>
+            <div id='text'>
+              <div id='description'></div>
+              <div id='method-list'>
+                <h2>Methods</h2>
+                <h3>Public Instance</h3>
+                <ol>
+                  <li><a target="docwin" href="#method-i-wrap_instance_method">wrap_instance_method</a></li>
+                  <li><a target="docwin" href="#method-i-wrap_singleton_method">wrap_singleton_method</a></li>
+                </ol>
+              </div>
+              <div id='context'>
+              </div>
+              <div id='section'>
+                <div id='methods'>
+                  <h2>Public Instance methods</h2>
+                  <div class='method public-instance' id='method-method-i-wrap_instance_method'>
+                    <a name='method-i-wrap_instance_method'></a>
+                    <div class='synopsis'>
+                      <span class='name'>wrap_instance_method</span>
+                      <span class='arguments'>(mod, method)</span>
+                    </div>
+                    <div class='description'>
+                      <p>
+                      Allow handlers to be called from C code by wrapping a method with
+                      begin/rescue.  Returns the aliased name of the original method.
+                      </p>
+                      <p>
+                      See the README.
+                      </p>
+                      <p>
+                      Example:
+                      </p>
+                      <pre>Cond.wrap_instance_method(Fixnum, :/)</pre>
+                    </div>
+                    <div class='source'>
+                      <a class='source-toggle' href='#' onclick="toggleCode('method-i-wrap_instance_method-source'); return false">
+                        [show source]
+                      </a>
+                      <pre id='method-i-wrap_instance_method-source'>    <span class="ruby-comment cmt"># File lib/cond/wrapping.rb, line 14</span>&#x000A;14:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">wrap_instance_method</span>(<span class="ruby-identifier">mod</span>, <span class="ruby-identifier">method</span>)&#x000A;15:       <span class="ruby-identifier">original</span> = <span class="ruby-node">&quot;cond_original_#{mod.inspect}_#{method.inspect}&quot;</span>&#x000A;16:       <span class="ruby-comment cmt"># TODO: jettison 1.8.6, remove eval and use |&amp;block|</span>&#x000A;17:       <span class="ruby-identifier">mod</span>.<span class="ruby-identifier">module_eval</span> <span class="ruby-value str">        alias_method :'#{original}', :'#{method}'        def #{method}(*args, &amp;block)          begin            send(:'#{original}', *args, &amp;block)          rescue Exception =&gt; e            raise e          end        end</span>&#x000A;18:       <span class="ruby-identifier">original</span>&#x000A;19:     <span class="ruby-keyword kw">end</span></pre>
+                    </div>
+                  </div>
+                  <div class='method public-instance' id='method-method-i-wrap_singleton_method'>
+                    <a name='method-i-wrap_singleton_method'></a>
+                    <div class='synopsis'>
+                      <span class='name'>wrap_singleton_method</span>
+                      <span class='arguments'>(mod, method)</span>
+                    </div>
+                    <div class='description'>
+                      <p>
+                      Allow handlers to be called from C code by wrapping a method with
+                      begin/rescue.  Returns the aliased name of the original method.
+                      </p>
+                      <p>
+                      See the README.
+                      </p>
+                      <p>
+                      Example:
+                      </p>
+                      <pre>Cond.wrap_singleton_method(IO, :read)</pre>
+                    </div>
+                    <div class='source'>
+                      <a class='source-toggle' href='#' onclick="toggleCode('method-i-wrap_singleton_method-source'); return false">
+                        [show source]
+                      </a>
+                      <pre id='method-i-wrap_singleton_method-source'>    <span class="ruby-comment cmt"># File lib/cond/wrapping.rb, line 40</span>&#x000A;40:     <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">wrap_singleton_method</span>(<span class="ruby-identifier">mod</span>, <span class="ruby-identifier">method</span>)&#x000A;41:       <span class="ruby-identifier">singleton_class</span> = <span class="ruby-keyword kw">class</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">mod</span> ; <span class="ruby-keyword kw">self</span> ; <span class="ruby-keyword kw">end</span></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+      <div id='footer-push'></div>
+    </div>
+    <div id='footer'>
+      <a target="docwin" href="http://github.com/mislav/hanna/tree/master"><strong>Hanna</strong> RDoc template</a>
+    </div>
+  </body>
+</html>
