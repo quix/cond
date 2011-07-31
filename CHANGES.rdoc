@@ -1,6 +1,11 @@
 
 = cond Changes
 
+== Version 0.3.2
+
+* fix typo in readme
+* update tools
+
 == Version 0.3.1
 
 * update build tools
