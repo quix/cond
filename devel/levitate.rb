@@ -1,5 +1,7 @@
 
 class Levitate
+  include Rake::DSL if defined? Rake::DSL
+
   def initialize(gem_name)
     @gem_name = gem_name
 
