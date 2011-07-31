@@ -31,7 +31,7 @@ Resolve errors without unwinding the stack.
 
 == Install
 
-  % gem install live_ast
+  % gem install cond
 
 Or from inside an unpacked .tgz download, <code>rake install</code> /
 <code>rake uninstall</code>.
